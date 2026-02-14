@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ecg-transcovnet"
+version = "0.1.0"
+description = "ECG-TransCovNet: Hybrid CNN-Transformer for ECG arrhythmia classification"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+dependencies = [
+    "torch>=2.0",
+    "numpy>=1.24",
+    "h5py>=3.8",
+    "matplotlib>=3.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[project.scripts]
+ecg-train = "scripts.train:main"
+
+[tool.setuptools.packages.find]
+include = ["ecg_transcovnet*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

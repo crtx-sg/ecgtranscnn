@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (keep directory structure via .gitkeep)
+data/**/*.h5
+data/**/*.npz
+data/**/*.npy
+
+# Model checkpoints (large binary files)
+models/**/*.pt
+
+# Generated outputs
+results/
+plots/
+*.png
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log

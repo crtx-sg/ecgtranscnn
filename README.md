@@ -9,6 +9,7 @@ Based on: Shah et al., *"ECG-TransCovNet: A hybrid transformer model for accurat
 ## Table of Contents
 
 - [Architecture](#architecture)
+- [Preprocessing](#preprocessing)
 - [Cardiac Conditions](#cardiac-conditions)
 - [HDF5 Dataset Schema](#hdf5-dataset-schema)
 - [Model Performance](#model-performance)
@@ -82,6 +83,85 @@ Output: 16-class logits
 | Dropout | 0.1 |
 | Signal length | 2400 (12s × 200 Hz) |
 | Input channels | 7 (all leads) |
+
+---
+
+## Preprocessing
+
+Raw ECG signals are noisy — baseline wander, powerline interference, EMG bursts, and motion artifacts all degrade classification accuracy. The preprocessing module (`ecg_transcovnet/preprocessing.py`) applies a per-lead IIR filter pipeline followed by z-score normalization, replacing the previous normalization-only approach.
+
+### Filter Pipeline
+
+Filters are applied per-lead in this order using zero-phase `filtfilt` (forward-backward filtering) to preserve QRS timing:
+
+| Stage | Algorithm | Default Parameters | Target Artifact |
+|-------|-----------|-------------------|-----------------|
+| 1. Spike removal | Median filter (optional) | kernel=5 | Motion artifact spikes |
+| 2. Baseline wander | 2nd-order Butterworth high-pass | cutoff=0.5 Hz | 0.1–0.5 Hz drift |
+| 3. Powerline 50 Hz | IIR notch filter | Q=30 | 50 Hz interference (Europe/Asia) |
+| 4. Powerline 60 Hz | IIR notch filter | Q=30 | 60 Hz interference (Americas/Japan) |
+| 5. High-freq noise | 4th-order Butterworth low-pass | cutoff=40 Hz | EMG, Gaussian noise |
+| 6. Normalization | Per-lead z-score | mean=0, std=1 | Amplitude/offset variation |
+
+### Filter Presets
+
+Four named presets are available via the `--filter-preset` CLI flag on all scripts:
+
+| Preset | Filters Applied | Use Case |
+|--------|----------------|----------|
+| `none` | Z-score normalization only | Backward compatibility (default) |
+| `default` | HP 0.5 Hz + notch 50/60 Hz + LP 40 Hz + z-score | Recommended for noisy data |
+| `conservative` | HP 0.3 Hz + notch 50/60 Hz (Q=50) + LP 45 Hz + z-score | Minimal signal alteration |
+| `aggressive` | Median + HP 0.67 Hz + notch 50/60 Hz + LP 35 Hz + z-score | Heavy noise environments |
+
+### Usage
+
+```python
+from ecg_transcovnet import PreprocessingPipeline, FILTER_PRESETS, FilterConfig
+
+# Use a named preset
+pipeline = PreprocessingPipeline(FILTER_PRESETS["default"])
+clean_signal = pipeline(raw_signal)  # (7, 2400) → (7, 2400) float32
+
+# Custom configuration
+config = FilterConfig(
+    highpass_enabled=True, highpass_cutoff=0.5,
+    notch_50_enabled=True, notch_60_enabled=True,
+    lowpass_enabled=True, lowpass_cutoff=40.0,
+    normalize=True,
+)
+pipeline = PreprocessingPipeline(config)
+clean_signal = pipeline(raw_signal)
+```
+
+### CLI Usage
+
+All scripts (`train.py`, `evaluate.py`, `processor.py`) accept `--filter-preset`:
+
+```bash
+# Training with preprocessing
+python scripts/train.py --noise-level mixed --filter-preset default
+
+# Inference with preprocessing
+python scripts/processor.py \
+    --watch-dir data/inference \
+    --checkpoint models/noise_robust/best_model.pt \
+    --process-existing \
+    --filter-preset default
+
+# Evaluation with preprocessing
+python scripts/evaluate.py \
+    --checkpoint models/noise_robust/best_model.pt \
+    --noise-level high \
+    --filter-preset default
+```
+
+### Design Notes
+
+- **IIR Butterworth** filters (not FIR) — at 200 Hz sampling rate, a 0.5 Hz FIR high-pass would need ~1600 taps
+- **`filtfilt`** (forward-backward) for zero phase distortion — preserves QRS morphology and timing
+- **Precomputed coefficients** — `PreprocessingPipeline` computes `butter`/`iirnotch` coefficients once at construction, reuses per signal
+- **Lazy scipy imports** — scipy is only imported when filtering is enabled, so the package loads without it when using preset `none`
 
 ---
 
@@ -332,6 +412,7 @@ pip install -r requirements.txt
 - Python >= 3.10
 - PyTorch >= 2.0
 - NumPy >= 1.24
+- SciPy >= 1.10 (signal filtering; lazy-loaded, only needed when filter preset is not `none`)
 - h5py >= 3.8
 - matplotlib >= 3.7
 - pyinotify >= 0.9.6 (Linux; for inference processor directory watching)
@@ -373,7 +454,38 @@ python scripts/train.py \
     --output-dir models/noise_robust
 ```
 
+### Training with preprocessing filters
+
+```bash
+python scripts/train.py \
+    --num-train 16000 \
+    --num-val 3200 \
+    --epochs 100 \
+    --batch-size 64 \
+    --noise-level high \
+    --filter-preset default \
+    --output-dir models/filtered
+```
+
 Checkpoints, training curves, and confusion matrices are saved to the output directory.
+
+### Training Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--num-train` | 16000 | Number of training samples |
+| `--num-val` | 3200 | Number of validation samples |
+| `--leads` | `all` | Comma-separated lead names, or `all` for all 7 leads |
+| `--noise-level` | `clean` | Noise preset: clean, low, medium, high, mixed |
+| `--filter-preset` | `none` | Preprocessing filter preset: none, default, conservative, aggressive |
+| `--distribution` | `balanced` | Training data distribution: balanced or mit_bih |
+| `--cache-dir` | `data/training_cache` | Cache directory for generated datasets |
+| `--test-dir` | — | Directory with HDF5 test files for post-training evaluation |
+| `--epochs` | 100 | Maximum training epochs |
+| `--batch-size` | 64 | Batch size |
+| `--lr` | 5e-4 | Learning rate |
+| `--patience` | 20 | Early stopping patience |
+| `--output-dir` | `models` | Output directory for checkpoints and plots |
 
 ---
 
@@ -441,6 +553,7 @@ python scripts/generate_inference_data.py \
 | `--watch-dir` | *(required)* | Directory to monitor for new `.h5` files |
 | `--checkpoint` | `models/noise_robust/best_model.pt` | Model checkpoint path |
 | `--process-existing` | off | Process files already present on startup |
+| `--filter-preset` | `none` | Preprocessing filter preset: none, default, conservative, aggressive |
 
 ---
 
@@ -654,6 +767,7 @@ python scripts/evaluate.py \
 | `--test-dir` | — | Directory with HDF5 test files |
 | `--num-samples` | 1000 | Synthetic samples to evaluate (if no test-dir) |
 | `--noise-level` | `clean` | Noise: clean, low, medium, high, mixed |
+| `--filter-preset` | `none` | Preprocessing filter preset: none, default, conservative, aggressive |
 | `--batch-size` | 64 | Evaluation batch size |
 | `--seed` | 99 | Random seed |
 | `--output-dir` | — | Directory for confusion matrix PNG |
@@ -690,12 +804,19 @@ for NOISE in clean low medium high; do
         --output-dir data/eval_${NOISE} \
         --noise-level ${NOISE} --conditions balanced --seed 42
 
-    echo "=== Noise: ${NOISE} ==="
+    echo "=== Noise: ${NOISE} (no filter) ==="
     python scripts/processor.py \
         --watch-dir data/eval_${NOISE} \
         --checkpoint models/noise_robust/best_model.pt \
-        --process-existing
+        --process-existing --filter-preset none
     # Ctrl+C after processing completes
+
+    echo "=== Noise: ${NOISE} (default filter) ==="
+    python scripts/processor.py \
+        --watch-dir data/eval_${NOISE} \
+        --checkpoint models/noise_robust/best_model.pt \
+        --process-existing --filter-preset default
+    # Ctrl+C — compare accuracy vs unfiltered
 done
 ```
 
@@ -790,6 +911,11 @@ python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt --num-
 python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt --num-samples 1000 --noise-level medium
 python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt --num-samples 1000 --noise-level high
 python scripts/evaluate.py --checkpoint models/improved/best_model.pt --num-samples 1000 --noise-level clean --output-dir results/
+
+# With preprocessing filters — compare filtered vs unfiltered on noisy data
+python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt --num-samples 1000 --noise-level high --filter-preset none
+python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt --num-samples 1000 --noise-level high --filter-preset default
+python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt --num-samples 1000 --noise-level high --filter-preset aggressive
 ```
 
 ### What Each Step Tests
@@ -797,13 +923,13 @@ python scripts/evaluate.py --checkpoint models/improved/best_model.pt --num-samp
 | Step | Purpose |
 |------|---------|
 | 1 | Baseline accuracy on clean, balanced data |
-| 2 | How accuracy degrades across noise levels |
+| 2 | How accuracy degrades across noise levels; filter vs no-filter comparison |
 | 3 | Per-condition precision/recall to find weak spots |
 | 4 | Robustness to specific artifact types (EMG, motion) |
 | 5 | Realistic mixed-noise scenario |
 | 6 | End-to-end live pipeline with inotify directory watching |
 | 7 | Compare baseline vs improved vs noise-robust models on same data |
-| 8 | Large-scale formal evaluation with full metrics and confusion matrix |
+| 8 | Large-scale formal evaluation; filtered vs unfiltered on noisy data |
 
 ---
 
@@ -813,6 +939,7 @@ python scripts/evaluate.py --checkpoint models/improved/best_model.pt --num-samp
 ecg_transcovnet/                # Python package
   __init__.py                   # Public API exports
   model.py                      # ECGTransCovNet, SKConv, CNNBackbone, FocalLoss
+  preprocessing.py              # FilterConfig, PreprocessingPipeline, preprocess_ecg
   constants.py                  # NUM_CLASSES, CLASS_NAMES, SIGNAL_LENGTH, leads
   data.py                       # Dataset generation, loading, augmentation
   training.py                   # train_one_epoch, validate, evaluate_detailed
@@ -840,6 +967,7 @@ models/                         # Saved checkpoints
   noise_robust/best_model.pt    # 87.4% accuracy (16,000 mixed-noise samples)
 
 tests/                          # Test suite (pytest)
+  test_preprocessing.py         # Preprocessing pipeline tests (14 tests)
 notebooks/                      # Educational Colab notebook
 ```
 
@@ -850,6 +978,7 @@ notebooks/                      # Educational Colab notebook
 - Python >= 3.10
 - PyTorch >= 2.0
 - NumPy >= 1.24
+- SciPy >= 1.10
 - h5py >= 3.8
 - matplotlib >= 3.7
 - pyinotify >= 0.9.6 (Linux only; for inference processor)

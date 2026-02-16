@@ -28,6 +28,7 @@ from ecg_transcovnet import (
     CLASS_NAMES,
     SIGNAL_LENGTH,
     ALL_LEADS,
+    FILTER_PRESETS,
 )
 from ecg_transcovnet.data import load_or_generate_data, evaluate_hdf5_test, AugmentedECGDataset
 from ecg_transcovnet.training import train_one_epoch, validate, evaluate_detailed
@@ -55,6 +56,9 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--cache-dir", type=str, default="data/training_cache")
     g.add_argument("--test-dir", type=str, default=None,
                    help="Directory with HDF5 test files for post-training evaluation")
+    g.add_argument("--filter-preset", type=str, default="none",
+                   choices=list(FILTER_PRESETS.keys()),
+                   help="Preprocessing filter preset")
 
     # Model
     g = p.add_argument_group("model")
@@ -106,10 +110,13 @@ def main():
 
     # ── Data ──────────────────────────────────────────────────────────────
     print("\n=== Data Generation ===")
+    filter_config = FILTER_PRESETS[args.filter_preset]
+    print(f"Filter preset: {args.filter_preset}")
     t0 = time.time()
     train_X, train_y, val_X, val_y = load_or_generate_data(
         args.cache_dir, args.num_train, args.num_val, leads, args.noise_level, args.seed,
         distribution=args.distribution,
+        filter_config=filter_config,
     )
     print(f"Data ready in {time.time() - t0:.1f}s")
     print(f"Train: {train_X.shape}  Val: {val_X.shape}")
@@ -271,7 +278,7 @@ def main():
 
     # ── HDF5 test evaluation ─────────────────────────────────────────────
     if args.test_dir:
-        evaluate_hdf5_test(model, args.test_dir, leads, device)
+        evaluate_hdf5_test(model, args.test_dir, leads, device, filter_config=filter_config)
 
     print(f"\nAll outputs saved to {output_dir}/")
     print(f"  best_model.pt       - checkpoint with best val accuracy")

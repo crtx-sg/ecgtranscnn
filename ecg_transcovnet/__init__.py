@@ -13,6 +13,12 @@ from .constants import (
     MIT_BIH_PROPORTIONS,
 )
 from .data import generate_dataset, load_or_generate_data, AugmentedECGDataset
+from .preprocessing import (
+    FilterConfig,
+    FILTER_PRESETS,
+    PreprocessingPipeline,
+    preprocess_ecg,
+)
 from .training import train_one_epoch, validate, evaluate_detailed
 from .visualization import (
     save_training_curves,
@@ -36,6 +42,11 @@ __all__ = [
     "SIGNAL_LENGTH",
     "ALL_LEADS",
     "MIT_BIH_PROPORTIONS",
+    # Preprocessing
+    "FilterConfig",
+    "FILTER_PRESETS",
+    "PreprocessingPipeline",
+    "preprocess_ecg",
     # Data
     "generate_dataset",
     "load_or_generate_data",

@@ -50,6 +50,9 @@ class ConditionConfig:
         rr_irregularity: standard deviation of RR jitter as fraction of beat interval.
         wide_qrs: whether the QRS complex should be widened.
         st_elevation: whether ST segment elevation is present.
+        min_pr_interval: minimum PR interval in seconds. When set, the patient's
+            PR interval is clamped to at least this value (e.g. 0.22 for 1st-degree
+            AV block). None means no constraint.
     """
 
     hr_range: tuple[float, float]
@@ -59,6 +62,7 @@ class ConditionConfig:
     rr_irregularity: float
     wide_qrs: bool
     st_elevation: bool
+    min_pr_interval: float | None = None
 
 
 CONDITION_REGISTRY: dict[Condition, ConditionConfig] = {
@@ -183,6 +187,7 @@ CONDITION_REGISTRY: dict[Condition, ConditionConfig] = {
         rr_irregularity=0.03,
         wide_qrs=False,
         st_elevation=False,
+        min_pr_interval=0.22,  # 1st-degree: PR > 200ms (use 220ms minimum)
     ),
     Condition.AV_BLOCK_2_TYPE1: ConditionConfig(
         hr_range=(45.0, 80.0),
@@ -192,6 +197,7 @@ CONDITION_REGISTRY: dict[Condition, ConditionConfig] = {
         rr_irregularity=0.15,
         wide_qrs=False,
         st_elevation=False,
+        min_pr_interval=0.22,  # Wenckebach also has prolonged PR
     ),
     Condition.AV_BLOCK_2_TYPE2: ConditionConfig(
         hr_range=(40.0, 70.0),
@@ -201,6 +207,7 @@ CONDITION_REGISTRY: dict[Condition, ConditionConfig] = {
         rr_irregularity=0.20,
         wide_qrs=False,
         st_elevation=False,
+        min_pr_interval=0.22,  # Type 2 also has prolonged PR baseline
     ),
     # --- Other ---
     Condition.ST_ELEVATION: ConditionConfig(

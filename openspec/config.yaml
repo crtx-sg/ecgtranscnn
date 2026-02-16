@@ -1,20 +1,21 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Tech stack: Python 3.10+, PyTorch 2.0+, NumPy, h5py, matplotlib, pyinotify
+  Domain: Medical AI - ECG arrhythmia classification (16 cardiac conditions)
+  Architecture: Hybrid CNN-Transformer (DETR-style object queries)
+  Data: Synthetic ECG generation with configurable noise, HDF5 Phase-0 schema
+  Testing: pytest with unit, integration, noise robustness, and e2e tests
+  Deployment: Real-time inference via directory-watching processor
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - Include clinical/domain context when relevant
+    - Consider impact on all 16 condition classifications
+    - Note any noise robustness implications
+  tasks:
+    - Break tasks into testable increments
+    - Include evaluation steps to verify model performance impact
+  delta-spec:
+    - Reference existing specs in openspec/specs/
+    - Document changes to HDF5 schema if applicable

@@ -30,6 +30,8 @@ from ecg_transcovnet import (
     CONDITION_TO_IDX,
     SIGNAL_LENGTH,
     ALL_LEADS,
+    FILTER_PRESETS,
+    PreprocessingPipeline,
 )
 from ecg_transcovnet.simulator.conditions import Condition
 
@@ -53,6 +55,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="Path to model checkpoint (.pt).")
     p.add_argument("--process-existing", action="store_true",
                     help="Process .h5 files already present in watch-dir on startup.")
+    p.add_argument("--filter-preset", type=str, default="none",
+                    choices=list(FILTER_PRESETS.keys()),
+                    help="Preprocessing filter preset.")
     return p
 
 
@@ -98,13 +103,21 @@ def process_file(
     leads: list[str],
     device: torch.device,
     tracker: MetricsTracker,
+    pipeline: PreprocessingPipeline | None = None,
 ) -> None:
     """Parse one HDF5 file, run inference per event, and print results."""
-    try:
-        hf = h5py.File(filepath, "r")
-    except Exception as e:
-        print(f"  [!] Could not open {filepath.name}: {e}")
-        return
+    max_retries = 5
+    hf = None
+    for attempt in range(max_retries):
+        try:
+            hf = h5py.File(filepath, "r", locking=False)
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                time.sleep(0.5 * (attempt + 1))
+            else:
+                print(f"  [!] Could not open {filepath.name} after {max_retries} attempts: {e}")
+                return
 
     with hf:
         event_keys = sorted(k for k in hf.keys() if k.startswith("event_"))
@@ -156,11 +169,9 @@ def process_file(
                     lead_arrays.append(np.zeros(SIGNAL_LENGTH, dtype=np.float32))
             signal = np.stack(lead_arrays, axis=0)  # (num_leads, 2400)
 
-            # Per-lead z-score normalisation (same as training)
-            for ch in range(signal.shape[0]):
-                mu, std = signal[ch].mean(), signal[ch].std()
-                if std > 1e-6:
-                    signal[ch] = (signal[ch] - mu) / std
+            # Preprocessing (filtering + normalization)
+            if pipeline is not None:
+                signal = pipeline(signal)
 
             # --- Inference ---
             x = torch.from_numpy(signal.astype(np.float32)).unsqueeze(0).to(device)
@@ -280,6 +291,11 @@ class HDF5EventHandler(pyinotify.ProcessEvent):
         if event.pathname.endswith(".h5"):
             self._queue.put(Path(event.pathname))
 
+    def process_IN_MOVED_TO(self, event: pyinotify.Event) -> None:
+        """Catch files that arrive via atomic rename (e.g. os.replace)."""
+        if event.pathname.endswith(".h5"):
+            self._queue.put(Path(event.pathname))
+
 
 # ---------------------------------------------------------------------------
 # Main loop
@@ -293,6 +309,9 @@ def main() -> None:
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, leads = load_model(args.checkpoint, device)
+
+    # Preprocessing pipeline
+    pipeline = PreprocessingPipeline(FILTER_PRESETS[args.filter_preset])
 
     # Banner
     ckpt_short = args.checkpoint if len(args.checkpoint) < 45 else "..." + args.checkpoint[-42:]
@@ -314,7 +333,7 @@ def main() -> None:
     wm = pyinotify.WatchManager()
     handler = HDF5EventHandler(file_queue)
     notifier = pyinotify.Notifier(wm, handler, timeout=500)
-    wm.add_watch(str(watch_dir), pyinotify.IN_CLOSE_WRITE)
+    wm.add_watch(str(watch_dir), pyinotify.IN_CLOSE_WRITE | pyinotify.IN_MOVED_TO)
 
     # Graceful shutdown on Ctrl+C
     shutdown = False
@@ -338,7 +357,7 @@ def main() -> None:
             while not file_queue.empty():
                 try:
                     filepath = file_queue.get_nowait()
-                    process_file(filepath, model, leads, device, tracker)
+                    process_file(filepath, model, leads, device, tracker, pipeline)
                 except Empty:
                     break
     except KeyboardInterrupt:

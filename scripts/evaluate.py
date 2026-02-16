@@ -23,6 +23,7 @@ from ecg_transcovnet import (
     CLASS_NAMES,
     SIGNAL_LENGTH,
     ALL_LEADS,
+    FILTER_PRESETS,
 )
 from ecg_transcovnet.data import generate_dataset, evaluate_hdf5_test
 from ecg_transcovnet.training import evaluate_detailed
@@ -46,6 +47,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed", type=int, default=99)
     p.add_argument("--output-dir", type=str, default=None,
                     help="Directory for confusion matrix output")
+    p.add_argument("--filter-preset", type=str, default="none",
+                    choices=list(FILTER_PRESETS.keys()),
+                    help="Preprocessing filter preset")
     return p
 
 
@@ -85,9 +89,12 @@ def main():
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
 
+    filter_config = FILTER_PRESETS[args.filter_preset]
+    print(f"Filter preset: {args.filter_preset}")
+
     # HDF5 test evaluation
     if args.test_dir:
-        evaluate_hdf5_test(model, args.test_dir, leads, device)
+        evaluate_hdf5_test(model, args.test_dir, leads, device, filter_config=filter_config)
         return
 
     # Synthetic data evaluation
@@ -96,6 +103,7 @@ def main():
     balanced = {c: 1.0 / NUM_CLASSES for c in Condition}
     test_X, test_y = generate_dataset(
         args.num_samples, leads, args.noise_level, balanced, args.seed,
+        filter_config=filter_config,
     )
 
     test_ds = TensorDataset(torch.from_numpy(test_X), torch.from_numpy(test_y))

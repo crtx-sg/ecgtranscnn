@@ -1,0 +1,113 @@
+{
+  "suite": "ecg-transcovnet-demo",
+  "seed": 42,
+  "total_files": 5,
+  "total_events": 80,
+  "files": [
+    {
+      "file": "DM0001_noise_sweep_high.h5",
+      "description": "All 16 conditions at high noise",
+      "events": 16,
+      "conditions": {
+        "N": 1,
+        "SB": 1,
+        "ST": 1,
+        "AFIB": 1,
+        "AFL": 1,
+        "A": 1,
+        "SVTA": 1,
+        "V": 1,
+        "VT": 1,
+        "VF": 1,
+        "L": 1,
+        "R": 1,
+        "1AVB": 1,
+        "2AVB1": 1,
+        "2AVB2": 1,
+        "STE": 1
+      },
+      "noise_levels": {
+        "high": 16
+      }
+    },
+    {
+      "file": "DM0002_boundary_min_hr.h5",
+      "description": "All conditions at min hr (high noise)",
+      "events": 16,
+      "conditions": {
+        "N": 1,
+        "SB": 1,
+        "ST": 1,
+        "AFIB": 1,
+        "AFL": 1,
+        "A": 1,
+        "SVTA": 1,
+        "V": 1,
+        "VT": 1,
+        "VF": 1,
+        "L": 1,
+        "R": 1,
+        "1AVB": 1,
+        "2AVB1": 1,
+        "2AVB2": 1,
+        "STE": 1
+      },
+      "noise_levels": {
+        "high": 16
+      }
+    },
+    {
+      "file": "DM0003_boundary_max_hr.h5",
+      "description": "All conditions at max hr (high noise)",
+      "events": 16,
+      "conditions": {
+        "N": 1,
+        "SB": 1,
+        "ST": 1,
+        "AFIB": 1,
+        "AFL": 1,
+        "A": 1,
+        "SVTA": 1,
+        "V": 1,
+        "VT": 1,
+        "VF": 1,
+        "L": 1,
+        "R": 1,
+        "1AVB": 1,
+        "2AVB1": 1,
+        "2AVB2": 1,
+        "STE": 1
+      },
+      "noise_levels": {
+        "high": 16
+      }
+    },
+    {
+      "file": "DM0004_group_normal.h5",
+      "description": "Normal conditions at high noise",
+      "events": 16,
+      "conditions": {
+        "N": 6,
+        "SB": 5,
+        "ST": 5
+      },
+      "noise_levels": {
+        "high": 16
+      }
+    },
+    {
+      "file": "DM0005_group_supraventricular.h5",
+      "description": "Supraventricular conditions at high noise",
+      "events": 16,
+      "conditions": {
+        "AFIB": 4,
+        "AFL": 4,
+        "A": 4,
+        "SVTA": 4
+      },
+      "noise_levels": {
+        "high": 16
+      }
+    }
+  ]
+}

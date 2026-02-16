@@ -261,11 +261,9 @@ def generate_single_lead(
         # P wave
         if rng.random() < condition_config.p_wave_presence:
             pr = patient_params.pr_interval
-            # First-degree AV block: prolong PR interval
-            if condition_config.hr_range[0] >= 55 and condition_config.p_wave_presence > 0.9:
-                if condition_config.qrs_duration_range == (0.08, 0.12) and condition_config.rr_irregularity == 0.03:
-                    # Check if this is AV_BLOCK_1 by HR range lower bound
-                    pass  # Use default PR
+            # Enforce minimum PR interval (e.g. AV blocks require PR > 200ms)
+            if condition_config.min_pr_interval is not None:
+                pr = max(pr, condition_config.min_pr_interval)
             p_center = bt - pr
             if p_center > 0:
                 signal += create_p_wave(time, p_center, patient_params, lead_scale, rng)
@@ -348,6 +346,9 @@ def generate_lead_with_fiducials(
         # P wave — uses same RNG call as generate_single_lead
         if rng.random() < condition_config.p_wave_presence:
             pr = patient_params.pr_interval
+            # Enforce minimum PR interval (e.g. AV blocks require PR > 200ms)
+            if condition_config.min_pr_interval is not None:
+                pr = max(pr, condition_config.min_pr_interval)
             p_center = bt - pr
             if p_center > 0:
                 p_half = patient_params.p_wave_width / 2

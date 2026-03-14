@@ -100,30 +100,6 @@ def generate_report(
             lines.append(f"- **Clinical Alerts**: {len(cs.ecg_vital_correlations)}")
     lines.append("")
 
-    # Per-event table
-    lines.append("## Event Results")
-    lines.append("")
-    header = "| Event | Ground Truth | Predicted | Prob | Match | HR | SpO2 | BP | RR | Temp | MEWS |"
-    sep = "|-------|-------------|-----------|------|-------|----|------|----|----|----|------|"
-    lines.append(header)
-    lines.append(sep)
-
-    for ev in fr.events:
-        v = ev.vitals
-        hr = str(int(v["HR"])) if "HR" in v else "—"
-        spo2 = f"{int(v['SpO2'])}%" if "SpO2" in v else "—"
-        bp = f"{int(v['Systolic'])}/{int(v['Diastolic'])}" if "Systolic" in v and "Diastolic" in v else "—"
-        rr = str(int(v["RespRate"])) if "RespRate" in v else "—"
-        temp = f"{v['Temp']:.1f}" if "Temp" in v else "—"
-        mews_str = str(ev.mews.total_score) if ev.mews else "—"
-        match_str = "Yes" if ev.match else "No"
-
-        lines.append(
-            f"| {ev.event_id} | {ev.gt_name} | {ev.pred_name} | {ev.pred_prob:.3f} "
-            f"| {match_str} | {hr} | {spo2} | {bp} | {rr} | {temp} | {mews_str} |"
-        )
-    lines.append("")
-
     # Per-event analysis
     if fr.clinical_summary:
         lines.append("## Clinical Analysis")
@@ -201,6 +177,29 @@ def generate_report(
                 for note in ev.clinical_notes:
                     lines.append(f"- {note}")
                 lines.append("")
+
+            # Classification mini-table
+            match_str = "Yes" if ev.match else "No"
+            lines.append("| Event | Ground Truth | Predicted | Prob | Match |")
+            lines.append("|-------|-------------|-----------|------|-------|")
+            lines.append(
+                f"| {ev.event_id} | {ev.gt_name} | {ev.pred_name} "
+                f"| {ev.pred_prob:.3f} | {match_str} |"
+            )
+            lines.append("")
+
+            # Vitals snapshot mini-table
+            v = ev.vitals
+            hr = str(int(v["HR"])) if "HR" in v else "—"
+            spo2 = f"{int(v['SpO2'])}%" if "SpO2" in v else "—"
+            bp = f"{int(v['Systolic'])}/{int(v['Diastolic'])}" if "Systolic" in v and "Diastolic" in v else "—"
+            rr = str(int(v["RespRate"])) if "RespRate" in v else "—"
+            temp = f"{v['Temp']:.1f}" if "Temp" in v else "—"
+            mews_str = str(ev.mews.total_score) if ev.mews else "—"
+            lines.append("| HR | SpO2 | BP | RR | Temp | MEWS |")
+            lines.append("|----|------|----|----|----|------|")
+            lines.append(f"| {hr} | {spo2} | {bp} | {rr} | {temp} | {mews_str} |")
+            lines.append("")
 
             # Per-event plots
             if event_plots and ev.event_id in event_plots:

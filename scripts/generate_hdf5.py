@@ -52,6 +52,12 @@ def build_parser() -> argparse.ArgumentParser:
     preset.add_argument("--balanced", action="store_true", help="Uniform across all 16 conditions.")
     preset.add_argument("--mit-bih", action="store_true", help="MIT-BIH-like distribution.")
 
+    # Verification
+    parser.add_argument(
+        "--verify-history", action="store_true",
+        help="After writing, read back HDF5 and verify vital history arrays.",
+    )
+
     return parser
 
 
@@ -106,6 +112,84 @@ def main() -> None:
 
     writer.write_file(str(output_path), events, patient_id=patient_id)
     print(f"\nWrote {len(events)} events to {output_path}")
+
+    if args.verify_history:
+        verify_history(str(output_path))
+
+
+def verify_history(filepath: str) -> None:
+    """Read back an HDF5 file and verify vital history arrays are present."""
+    import json
+    import h5py
+
+    print(f"\n{'=' * 60}")
+    print(f"Verifying vital history in {filepath}")
+    print(f"{'=' * 60}")
+
+    with h5py.File(filepath, "r") as hf:
+        event_keys = sorted(k for k in hf.keys() if k.startswith("event_"))
+        print(f"  Events: {len(event_keys)}")
+
+        all_ok = True
+        for ek in event_keys:
+            grp = hf[ek]
+            if "vitals" not in grp:
+                print(f"  {ek}: NO vitals group")
+                all_ok = False
+                continue
+
+            vg = grp["vitals"]
+            vital_names = list(vg.keys())
+            print(f"\n  {ek}  ({len(vital_names)} vitals)")
+
+            for vname in sorted(vital_names):
+                if "extras" not in vg[vname]:
+                    print(f"    {vname:12s}  NO extras")
+                    all_ok = False
+                    continue
+
+                ex = json.loads(vg[vname]["extras"][()].decode("utf-8"))
+                hist = ex.get("history")
+                value = float(vg[vname]["value"][()])
+
+                if hist is None:
+                    print(f"    {vname:12s}  val={value:>7}  history: MISSING")
+                    all_ok = False
+                    continue
+
+                n = len(hist)
+                first_val = hist[0]["value"]
+                last_val = hist[-1]["value"]
+
+                # Timestamps should be ascending
+                ts_sorted = all(
+                    hist[i]["timestamp"] <= hist[i + 1]["timestamp"]
+                    for i in range(n - 1)
+                )
+                span_sec = hist[-1]["timestamp"] - hist[0]["timestamp"]
+                span_min = span_sec / 60.0
+
+                upper = ex.get("upper_threshold")
+                lower = ex.get("lower_threshold")
+                thresh_str = f"[{lower}-{upper}]" if upper is not None else ""
+
+                status = "OK" if (10 <= n <= 30 and ts_sorted) else "WARN"
+                if status == "WARN":
+                    all_ok = False
+
+                print(
+                    f"    {vname:12s}  val={value:>7}  "
+                    f"history: {n:2d} pts over {span_min:5.1f} min  "
+                    f"range=[{first_val} -> {last_val}]  "
+                    f"sorted={ts_sorted}  {thresh_str}  {status}"
+                )
+
+    print(f"\n{'=' * 60}")
+    if all_ok:
+        print("  RESULT: ALL CHECKS PASSED")
+    else:
+        print("  RESULT: SOME CHECKS FAILED — see WARN/MISSING above")
+    print(f"{'=' * 60}")
 
 
 if __name__ == "__main__":

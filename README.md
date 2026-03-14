@@ -12,6 +12,8 @@ Based on: Shah et al., *"ECG-TransCovNet: A hybrid transformer model for accurat
 - [Preprocessing](#preprocessing)
 - [Cardiac Conditions](#cardiac-conditions)
 - [HDF5 Dataset Schema](#hdf5-dataset-schema)
+- [Clinical Analysis](#clinical-analysis)
+- [Report Generation](#report-generation)
 - [Model Performance](#model-performance)
 - [Setup](#setup)
 - [Training](#training)
@@ -192,7 +194,7 @@ The model classifies 16 cardiac conditions based on MIT-BIH annotation codes:
 
 ## HDF5 Dataset Schema
 
-Each generated file follows the naming convention `PatientID_YYYY-MM.h5` and contains a global metadata group plus one or more event groups:
+Each generated file follows the naming convention `PatientID_YYYY-MM.h5` and contains a global metadata group plus one or more event groups. Every vital sign carries a **history array** of time-stamped samples that record the trend leading up to the current value.
 
 ```
 PatientID_YYYY-MM.h5
@@ -233,7 +235,7 @@ PatientID_YYYY-MM.h5
 │   │   │   ├── value              #   int (bpm)
 │   │   │   ├── units              #   "bpm"
 │   │   │   ├── timestamp          #   epoch float
-│   │   │   └── extras             #   JSON: {"upper_threshold", "lower_threshold"}
+│   │   │   └── extras             #   JSON (see Vitals Extras below)
 │   │   ├── Pulse/                 # Pulse rate
 │   │   │   ├── value, units, timestamp, extras
 │   │   ├── SpO2/                  # Oxygen saturation
@@ -250,7 +252,8 @@ PatientID_YYYY-MM.h5
 │   │       ├── value              #   int (degrees)
 │   │       ├── units              #   "degrees"
 │   │       ├── timestamp          #   epoch float
-│   │       └── extras             #   JSON: {"step_count", "time_since_posture_change"}
+│   │       └── extras             #   JSON: {"step_count", "time_since_posture_change",
+│   │                              #          "history": [...]}
 │   │
 │   ├── timestamp                  # Event epoch timestamp (float)
 │   ├── uuid                       # Unique event identifier (string)
@@ -278,15 +281,15 @@ PatientID_YYYY-MM.h5
 | | `seconds_after_event` | float | `6.0` | Post-event signal duration |
 | | `data_quality_score` | float | 0.85–0.98 | Simulated data quality metric |
 | | `device_info` | bytes | `"RMSAI-SimDevice-v2.0"` | Source device identifier |
-| | `max_vital_history` | int | `30` | Max historical vital samples |
+| | `max_vital_history` | int | `30` | Max historical vital samples per vital |
 | `event_XXXX/ecg/` | `ECG1`–`vVX` | float32 | `(2400,)` | 7 leads, 12s at 200 Hz, gzip |
 | | `extras` | bytes | JSON string | Pacer info and offset |
 | `event_XXXX/ppg/` | `PPG` | float32 | `(900,)` | 12s at 75 Hz, gzip |
 | `event_XXXX/resp/` | `RESP` | float32 | `(~400,)` | 12s at 33.33 Hz, gzip |
-| `event_XXXX/vitals/*/` | `value` | int/float | scalar | Vital sign measurement |
+| `event_XXXX/vitals/*/` | `value` | int/float | scalar | Current vital sign measurement |
 | | `units` | bytes | e.g. `"bpm"` | Unit string |
 | | `timestamp` | float | epoch | Measurement time |
-| | `extras` | bytes | JSON string | Thresholds or posture metadata |
+| | `extras` | bytes | JSON string | Thresholds, history, and metadata (see below) |
 | `event_XXXX/` | `timestamp` | float | epoch | Event timestamp |
 | | `uuid` | string | UUID4 | Unique event ID |
 | *(attrs)* | `condition` | string | e.g. `"AFIB"` | Ground truth condition code |
@@ -303,16 +306,152 @@ PatientID_YYYY-MM.h5
 
 ### Vital Signs
 
-| Vital | Units | Typical Range | Extras |
-|-------|-------|---------------|--------|
-| HR | bpm | 40–180 | upper/lower threshold |
-| Pulse | bpm | 40–180 | upper/lower threshold |
-| SpO2 | % | 88–100 | upper/lower threshold |
-| Systolic | mmHg | 100–180 | upper/lower threshold |
-| Diastolic | mmHg | 60–110 | upper/lower threshold |
-| RespRate | breaths/min | 12–30 | upper/lower threshold |
-| Temp | °F | 96–101 | upper/lower threshold |
-| XL_Posture | degrees | -10–45 | step_count, time_since_posture_change |
+| Vital | Units | Typical Range | History Interval | MEWS Scored |
+|-------|-------|---------------|-----------------|-------------|
+| HR | bpm | 40–180 | 60–300s | Yes |
+| Pulse | bpm | 40–180 | 60–300s | No |
+| SpO2 | % | 88–100 | 30–180s | Yes |
+| Systolic | mmHg | 100–180 | 120–1800s | Yes |
+| Diastolic | mmHg | 60–110 | 120–1800s | No (plotted) |
+| RespRate | breaths/min | 12–30 | 60–600s | Yes |
+| Temp | °F | 96–101 | 300–3600s | Yes |
+| XL_Posture | degrees | -10–45 | 10–60s | No |
+
+### Vitals Extras JSON
+
+Each vital's `extras` dataset is a JSON string with structure varying by vital type:
+
+**Standard vitals** (HR, Pulse, SpO2, Systolic, Diastolic, RespRate, Temp):
+
+```json
+{
+  "upper_threshold": 100,
+  "lower_threshold": 60,
+  "history": [
+    {"value": 75.2, "timestamp": 1741816800.0},
+    {"value": 74.8, "timestamp": 1741816860.0},
+    ...
+  ]
+}
+```
+
+**XL_Posture**:
+
+```json
+{
+  "step_count": 142,
+  "time_since_posture_change": 1200,
+  "history": [
+    {"value": 14, "timestamp": 1741816800.0},
+    {"value": 7, "timestamp": 1741816810.0},
+    ...
+  ]
+}
+```
+
+### Vital History
+
+Each vital carries up to `max_vital_history` (default 30) historical samples in its `extras.history` array. Samples are ordered ascending by timestamp and represent the trend leading up to the current `value`.
+
+- **Timestamps** are epoch floats; intervals vary by vital type (e.g. HR samples every 1–5 min, Temp samples every 5–60 min)
+- **Values** interpolate from a condition-dependent baseline toward the current value with jitter, simulating realistic monitor trends
+- History is used by the MEWS history scorer (`compute_mews_history`) and per-event vitals plots
+- The `--verify-history` flag on `generate_hdf5.py` validates history integrity (sort order, sample count, range bounds)
+
+---
+
+## Clinical Analysis
+
+The inference pipeline includes automated clinical analysis for each event, implemented across three modules:
+
+### MEWS Scoring (`ecg_transcovnet/mews.py`)
+
+Modified Early Warning Score with SpO2 replacing AVPU. Five components are scored 0–3 each:
+
+| Component | Score 0 | Score 1 | Score 2 | Score 3 |
+|-----------|---------|---------|---------|---------|
+| Heart Rate | 51–100 | 101–110 | 41–50 or 111–130 | <40 or >130 |
+| Systolic BP | 101–200 | 81–100 | 71–80 or >200 | <70 |
+| Resp Rate | 9–14 | 15–20 | <9 or 21–29 | >=30 |
+| Temperature | 35.0–38.4°C | 38.5–39.0°C | <35.0 or >39.0°C | — |
+| SpO2 | >=94% | 90–93% | 85–89% | <85% |
+
+**Risk levels**: Low (0–2), Medium (3–4), High (5–6), Critical (>6)
+
+#### History-Based MEWS (`compute_mews_history`)
+
+In addition to single-point MEWS per event, `compute_mews_history()` computes MEWS at every aligned timestamp from vitals history:
+
+1. Collects all unique timestamps from the 5 scored vitals (HR, Systolic, RespRate, Temp, SpO2)
+2. Sorts timestamps ascending
+3. Forward-fills each vital (at any query time, uses the most recent sample <= that time)
+4. At each timestamp where all 5 vitals have at least one prior sample, calls `calculate_mews()`
+5. Returns `list[dict]` of `{"timestamp": float, "mews": MEWSResult}` ordered by time
+
+This produces a MEWS trend over time for each event, enabling early deterioration detection.
+
+### Trend Analysis
+
+`assess_trends()` computes linear regression slopes across events for each vital. When vitals history is available, the full time-series is used instead of single-value-per-event. Trends are classified as "improving", "deteriorating", or "stable" based on a relative-slope threshold.
+
+### ECG-Vital Correlations
+
+`correlate_ecg_vitals()` generates rule-based clinical notes:
+
+- VT with hypoxemia (SpO2 < 90%) — immediate intervention
+- VF detected — initiate ACLS protocol
+- Bradycardia with hypotension (HR < 50, SBP < 90)
+- Tachycardia with desaturation (HR > 130, SpO2 < 92%)
+- AFib with rapid ventricular response (HR > 120)
+- High MEWS (>= 5) — escalate care
+
+---
+
+## Report Generation
+
+### Markdown Reports (`ecg_transcovnet/report.py`)
+
+Each processed HDF5 file produces a markdown report (`report-{patient_id}-{alarm_id}.md`) with:
+
+1. **Metadata table** — file, patient ID, alarm ID, event count, generation timestamp
+2. **Summary** — accuracy, overall MEWS trend, clinical alert count
+3. **Event results table** — per-event ground truth, prediction, probability, vitals, MEWS score
+4. **Clinical analysis per event**:
+   - MEWS component breakdown table
+   - Threshold status for each vital (normal / above / below)
+   - History summary (sample count, time span, trend direction)
+   - Clinical correlation notes
+   - **Per-event plots** (ECG, vitals, MEWS history)
+5. **Vital sign trends** — cross-event linear trend table
+
+### Per-Event Plots (`ecg_transcovnet/plots.py`)
+
+Each event generates three plot types:
+
+| Plot | Description | Filename |
+|------|-------------|----------|
+| **ECG** | All 7 leads (ECG1, ECG2, ECG3, aVR, aVL, aVF, vVX) as subplots | `{patient}-{alarm}_ecg_{event_id}.png` |
+| **Vitals** | 5 subplots (HR, SpO2, BP with Diastolic overlay, RespRate, Temp) from history | `{patient}-{alarm}_vitals_{event_id}.png` |
+| **MEWS History** | MEWS score over time with risk-band shading (green/gold/orange/red) | `{patient}-{alarm}_mews_{event_id}.png` |
+
+Plots are embedded in the markdown report as image references under each event's `#### Plots` section.
+
+```bash
+# Generate data with vitals history and run full pipeline
+python scripts/generate_hdf5.py 5 --seed 42 --output-dir data/inference --verify-history
+
+timeout 20 python scripts/processor.py \
+    --watch-dir data/inference \
+    --checkpoint models/noise_robust/best_model.pt \
+    --process-existing \
+    --plot-dir data/inference/plots
+```
+
+Output:
+```
+  Plots: 15 saved to data/inference/plots/
+  Report: data/inference/report-PT4210-2026-03.md
+```
 
 ---
 
@@ -506,6 +645,13 @@ python scripts/processor.py \
     --watch-dir data/inference \
     --checkpoint models/noise_robust/best_model.pt \
     --process-existing
+
+# With per-event plots and reports
+python scripts/processor.py \
+    --watch-dir data/inference \
+    --checkpoint models/noise_robust/best_model.pt \
+    --process-existing \
+    --plot-dir data/inference/plots
 ```
 
 ### Drop Files in Another Terminal
@@ -527,24 +673,29 @@ python scripts/generate_inference_data.py \
 ╚══════════════════════════════════════════════════════════════════╝
   Device: cuda
 
-── PT1234_2026-02.h5 (5 events) ──────────────────────────────────
+── PT4210_2026-03.h5 (5 events) ──────────────────────────────────
   Event   Ground Truth                Predicted                   Match    HR   SpO2          BP   RR
-  1001    ATRIAL_FIBRILLATION         ATRIAL_FIBRILLATION             T   142    95%      138/88   22
-  1002    NORMAL_SINUS                NORMAL_SINUS                    T    72    98%      120/78   16
+  1001    AV_BLOCK_1                  NORMAL_SINUS                    F    75    96%      110/73   17
+  1002    AV_BLOCK_2_TYPE2            AV_BLOCK_2_TYPE2                T    66    96%      125/80   15
+  1003    ATRIAL_FIBRILLATION         ATRIAL_FIBRILLATION             T    89    97%      120/95   19
   ...
   File accuracy: 4/5 (80.0%)
+  Plots: 15 saved to data/inference/plots/
+  Report: data/inference/report-PT4210-2026-03.md
 
 [Ctrl+C]
 
 ══ Aggregate Classification Report ══════════════════════════════
-  Accuracy: 0.875  (7/8)
+  Accuracy: 0.800  (4/5)
 
   Condition                      Prec    Rec     F1     N
   ─────────────────────────────────────────────────────
-  ATRIAL_FIBRILLATION           1.000  1.000  1.000     3
+  ATRIAL_FIBRILLATION           1.000  1.000  1.000     1
   ...
   Macro F1: 0.860
 ```
+
+When `--plot-dir` is specified, the processor generates 3 plots per event (ECG all leads, vitals history, MEWS history) and a markdown report with embedded plot references.
 
 ### Processor Options
 
@@ -554,6 +705,7 @@ python scripts/generate_inference_data.py \
 | `--checkpoint` | `models/noise_robust/best_model.pt` | Model checkpoint path |
 | `--process-existing` | off | Process files already present on startup |
 | `--filter-preset` | `none` | Preprocessing filter preset: none, default, conservative, aggressive |
+| `--plot-dir` | — | Directory for per-event plots (ECG, vitals, MEWS). If omitted, no plots are created |
 
 ---
 
@@ -661,7 +813,12 @@ For general-purpose HDF5 file creation (single file, more presets):
 python scripts/generate_hdf5.py 10 --condition ATRIAL_FIBRILLATION --noise-level high
 python scripts/generate_hdf5.py 20 --balanced --output-dir data/train
 python scripts/generate_hdf5.py 30 --mit-bih --seed 42
+
+# Generate with vitals history verification
+python scripts/generate_hdf5.py 5 --seed 42 --output-dir data/inference --verify-history
 ```
+
+The `--verify-history` flag validates that all vitals history arrays are correctly sorted by timestamp, within expected ranges, and have the expected sample count.
 
 ---
 
@@ -940,12 +1097,15 @@ ecg_transcovnet/                # Python package
   __init__.py                   # Public API exports
   model.py                      # ECGTransCovNet, SKConv, CNNBackbone, FocalLoss
   preprocessing.py              # FilterConfig, PreprocessingPipeline, preprocess_ecg
-  constants.py                  # NUM_CLASSES, CLASS_NAMES, SIGNAL_LENGTH, leads
+  constants.py                  # NUM_CLASSES, CLASS_NAMES, SIGNAL_LENGTH, ALL_LEADS
   data.py                       # Dataset generation, loading, augmentation
   training.py                   # train_one_epoch, validate, evaluate_detailed
   visualization.py              # Plotting utilities (waveforms, confusion matrix, attention)
+  mews.py                       # MEWS scoring, compute_mews_history, trend analysis, correlations
+  plots.py                      # Per-event plot generation (ECG, vitals, MEWS history)
+  report.py                     # Markdown report generation (EventResult, FileResult, write_report)
   simulator/                    # Synthetic ECG signal simulator
-    ecg_simulator.py            #   ECGSimulator facade (7-lead ECG + PPG + RESP + vitals)
+    ecg_simulator.py            #   ECGSimulator facade (7-lead ECG + PPG + RESP + vitals + history)
     hdf5_writer.py              #   HDF5EventWriter (Phase-0 compatible output)
     conditions.py               #   16 cardiac condition definitions
     morphology.py               #   Beat morphology generation (P-QRS-T)
@@ -954,10 +1114,10 @@ ecg_transcovnet/                # Python package
 scripts/                        # CLI tools
   train.py                      # Training pipeline (AdamW, cosine LR, focal loss)
   evaluate.py                   # Formal model evaluation with metrics
-  generate_hdf5.py              # General HDF5 file generation
+  generate_hdf5.py              # General HDF5 file generation (--verify-history)
   generate_inference_data.py    # Inference data generator (conditions, noise, delay)
   generate_test_data.py         # Per-condition test set generation
-  processor.py                  # Inference processor (inotify watcher + model)
+  processor.py                  # Inference processor (inotify watcher + model + plots + reports)
   visualize.py                  # Signal/prediction/attention visualization
   visualize_hdf5.py             # HDF5 event inspection and plotting
 

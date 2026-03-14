@@ -10,6 +10,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import signal
 import sys
 import time
@@ -33,6 +34,9 @@ from ecg_transcovnet import (
     FILTER_PRESETS,
     PreprocessingPipeline,
 )
+from ecg_transcovnet.mews import analyze_file, calculate_mews, correlate_ecg_vitals
+from ecg_transcovnet.report import EventResult, FileResult, extract_ids, write_report
+from ecg_transcovnet.plots import generate_plots
 from ecg_transcovnet.simulator.conditions import Condition
 
 # Reverse mapping: condition value → class index
@@ -58,6 +62,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--filter-preset", type=str, default="none",
                     choices=list(FILTER_PRESETS.keys()),
                     help="Preprocessing filter preset.")
+    p.add_argument("--plot-dir", type=str, default=None,
+                    help="Directory for generated plots. If omitted, no plots are created.")
     return p
 
 
@@ -104,8 +110,12 @@ def process_file(
     device: torch.device,
     tracker: MetricsTracker,
     pipeline: PreprocessingPipeline | None = None,
-) -> None:
-    """Parse one HDF5 file, run inference per event, and print results."""
+    keep_signals: bool = False,
+) -> FileResult | None:
+    """Parse one HDF5 file, run inference per event, and print results.
+
+    Returns a FileResult for report/plot generation, or None on failure.
+    """
     max_retries = 5
     hf = None
     for attempt in range(max_retries):
@@ -117,13 +127,16 @@ def process_file(
                 time.sleep(0.5 * (attempt + 1))
             else:
                 print(f"  [!] Could not open {filepath.name} after {max_retries} attempts: {e}")
-                return
+                return None
 
     with hf:
         event_keys = sorted(k for k in hf.keys() if k.startswith("event_"))
         if not event_keys:
             print(f"  [!] No events found in {filepath.name}")
-            return
+            return None
+
+        patient_id, alarm_id = extract_ids(filepath, hf)
+        file_result = FileResult(filepath=filepath, patient_id=patient_id, alarm_id=alarm_id)
 
         print(f"\n\u2500\u2500 {filepath.name} ({len(event_keys)} events) " + "\u2500" * max(0, 60 - len(filepath.name)))
 
@@ -178,6 +191,7 @@ def process_file(
             logits = model(x)
             probs = F.softmax(logits, dim=-1)[0]
             pred_idx = probs.argmax().item()
+            pred_prob = probs[pred_idx].item()
             pred_name = CLASS_NAMES[pred_idx]
             match = pred_idx == gt_idx
 
@@ -188,19 +202,40 @@ def process_file(
             tracker.record(gt_idx, pred_idx)
 
             # --- Read vitals ---
-            hr_str = sp_str = bp_str = rr_str = "—"
+            vitals: dict[str, float] = {}
+            hr_str = sp_str = bp_str = rr_str = "\u2014"
             if "vitals" in grp:
                 vg = grp["vitals"]
                 if "HR" in vg:
-                    hr_str = str(int(vg["HR/value"][()]))
+                    vitals["HR"] = float(vg["HR/value"][()])
+                    hr_str = str(int(vitals["HR"]))
                 if "SpO2" in vg:
-                    sp_str = f"{int(vg['SpO2/value'][()])}%"
+                    vitals["SpO2"] = float(vg["SpO2/value"][()])
+                    sp_str = f"{int(vitals['SpO2'])}%"
                 if "Systolic" in vg and "Diastolic" in vg:
-                    sys_v = int(vg["Systolic/value"][()])
-                    dia_v = int(vg["Diastolic/value"][()])
-                    bp_str = f"{sys_v}/{dia_v}"
+                    vitals["Systolic"] = float(vg["Systolic/value"][()])
+                    vitals["Diastolic"] = float(vg["Diastolic/value"][()])
+                    bp_str = f"{int(vitals['Systolic'])}/{int(vitals['Diastolic'])}"
                 if "RespRate" in vg:
-                    rr_str = str(int(vg["RespRate/value"][()]))
+                    vitals["RespRate"] = float(vg["RespRate/value"][()])
+                    rr_str = str(int(vitals["RespRate"]))
+                if "Temp" in vg:
+                    vitals["Temp"] = float(vg["Temp/value"][()])
+
+            # Parse extras for history and thresholds
+            vitals_history: dict = {}
+            vitals_thresholds: dict = {}
+            if "vitals" in grp:
+                vg = grp["vitals"]
+                for vname in vg:
+                    if "extras" in vg[vname]:
+                        ex = json.loads(vg[vname]["extras"][()].decode("utf-8"))
+                        if "history" in ex:
+                            vitals_history[vname] = ex["history"]
+                        upper = ex.get("upper_threshold")
+                        lower = ex.get("lower_threshold")
+                        if upper is not None and lower is not None:
+                            vitals_thresholds[vname] = {"upper": upper, "lower": lower}
 
             match_char = "T" if match else "F"
             print(
@@ -214,9 +249,25 @@ def process_file(
                 f"  {rr_str:>3s}"
             )
 
+            # --- Build EventResult ---
+            ev_result = EventResult(
+                event_id=event_id,
+                gt_name=gt_name,
+                pred_name=pred_name,
+                pred_prob=pred_prob,
+                match=match,
+                vitals=vitals,
+                ecg_signal=signal.copy() if keep_signals else None,
+                vitals_history=vitals_history,
+                vitals_thresholds=vitals_thresholds,
+            )
+            file_result.events.append(ev_result)
+
         if file_total > 0:
             pct = 100.0 * file_correct / file_total
             print(f"  File accuracy: {file_correct}/{file_total} ({pct:.1f}%)")
+
+    return file_result
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +358,8 @@ def main() -> None:
     watch_dir = Path(args.watch_dir)
     watch_dir.mkdir(parents=True, exist_ok=True)
 
+    plot_dir = Path(args.plot_dir) if args.plot_dir else None
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, leads = load_model(args.checkpoint, device)
 
@@ -357,7 +410,45 @@ def main() -> None:
             while not file_queue.empty():
                 try:
                     filepath = file_queue.get_nowait()
-                    process_file(filepath, model, leads, device, tracker, pipeline)
+                    file_result = process_file(
+                        filepath, model, leads, device, tracker, pipeline,
+                        keep_signals=plot_dir is not None,
+                    )
+
+                    # Generate report and plots
+                    if file_result and file_result.events:
+                        # Clinical analysis (MEWS, trends, correlations)
+                        event_dicts = [
+                            {"condition": e.pred_name, "vitals": e.vitals,
+                             "vitals_history": e.vitals_history}
+                            for e in file_result.events
+                        ]
+                        file_result.clinical_summary = analyze_file(event_dicts)
+
+                        # Attach per-event MEWS and clinical notes
+                        for ev, mews in zip(
+                            file_result.events,
+                            file_result.clinical_summary.mews_scores,
+                        ):
+                            ev.mews = mews
+                            ev.clinical_notes = correlate_ecg_vitals(
+                                ev.pred_name, ev.vitals, mews,
+                            )
+
+                        # Generate plots if requested
+                        event_plots = None
+                        if plot_dir is not None:
+                            event_plots = generate_plots(file_result, plot_dir)
+                            if event_plots:
+                                n = sum(len(v) for v in event_plots.values())
+                                print(f"  Plots: {n} saved to {plot_dir}/")
+
+                        # Write markdown report
+                        report_path = write_report(
+                            file_result, plot_dir=plot_dir, event_plots=event_plots,
+                        )
+                        print(f"  Report: {report_path}")
+
                 except Empty:
                     break
     except KeyboardInterrupt:
@@ -377,8 +468,6 @@ if __name__ == "__main__":
 #
 # - No GPU batching: processes one event at a time. Could batch all events in
 #   a file for better throughput on GPU.
-# - Console only: no persistent results log. Could add --output-csv or
-#   --output-json for downstream analysis.
 # - pyinotify is Linux-only. For macOS support, could fall back to polling
 #   (e.g. watchdog library or a simple os.listdir loop).
 # - No retry on corrupt HDF5 files. A try/except per file is added but no

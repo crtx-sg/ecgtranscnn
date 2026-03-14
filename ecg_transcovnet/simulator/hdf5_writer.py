@@ -128,6 +128,8 @@ class HDF5EventWriter:
             else:
                 extras["step_count"] = info.get("step_count", 0)
                 extras["time_since_posture_change"] = info.get("time_since_posture_change", 0)
+            if "history" in info:
+                extras["history"] = info["history"]
             vg.create_dataset("extras", data=json.dumps(extras).encode("utf-8"))
 
         # --- Event-level metadata ---

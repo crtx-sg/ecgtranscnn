@@ -27,6 +27,8 @@ from .visualization import (
     plot_predictions,
     plot_attention_map,
 )
+from .mews import MEWSResult, calculate_mews
+from .report import EventResult, FileResult
 
 __all__ = [
     # Model
@@ -61,4 +63,10 @@ __all__ = [
     "plot_ecg_waveform",
     "plot_predictions",
     "plot_attention_map",
+    # MEWS
+    "MEWSResult",
+    "calculate_mews",
+    # Report
+    "EventResult",
+    "FileResult",
 ]

@@ -353,6 +353,63 @@ class ECGSimulator:
         resp = resp * 1000 + self._rng.uniform(8000, 12000)
         return resp.astype(np.float32)
 
+    # --- Vital history ---
+
+    # Interval ranges (seconds) between consecutive history samples per vital
+    _HISTORY_INTERVALS: dict[str, tuple[int, int]] = {
+        "HR": (60, 300),
+        "Pulse": (60, 300),
+        "SpO2": (30, 180),
+        "Systolic": (300, 1800),
+        "Diastolic": (300, 1800),
+        "RespRate": (120, 600),
+        "Temp": (1800, 3600),
+        "XL_Posture": (10, 60),
+    }
+
+    def _generate_vital_history(
+        self,
+        current_value: float,
+        vital_name: str,
+        event_timestamp: float,
+        condition: Condition,
+    ) -> list[dict]:
+        """Generate 10-30 historical samples trending toward *current_value*."""
+        n_samples = int(self._rng.integers(10, 31))
+        lo, hi = self._HISTORY_INTERVALS.get(vital_name, (60, 300))
+
+        # Build timestamps going backward from event_timestamp
+        timestamps: list[float] = []
+        ts = event_timestamp
+        for _ in range(n_samples):
+            ts -= float(self._rng.integers(lo, hi + 1))
+            timestamps.append(ts)
+        timestamps.reverse()  # ascending order
+
+        # Condition-appropriate baseline offsets (from "normal" center)
+        _BASELINES: dict[str, float] = {
+            "HR": 75.0, "Pulse": 75.0, "SpO2": 98.0,
+            "Systolic": 120.0, "Diastolic": 75.0,
+            "RespRate": 16.0, "Temp": 98.6, "XL_Posture": 15.0,
+        }
+        baseline = _BASELINES.get(vital_name, current_value)
+
+        # Linearly interpolate from baseline toward current_value with jitter
+        history: list[dict] = []
+        for i, t in enumerate(timestamps):
+            frac = (i + 1) / n_samples  # 0→1
+            val = baseline + frac * (current_value - baseline)
+            # Add small jitter (1-2% of value range)
+            jitter_scale = max(abs(current_value - baseline) * 0.05, 0.5)
+            val += float(self._rng.normal(0, jitter_scale))
+            if vital_name == "XL_Posture":
+                val = int(round(val))
+            else:
+                val = round(val, 1)
+            history.append({"value": val, "timestamp": t})
+
+        return history
+
     # --- Vitals ---
 
     def _generate_vitals(self, hr: float, condition: Condition) -> dict[str, dict]:
@@ -387,7 +444,7 @@ class ECGSimulator:
             diastolic = self._rng.uniform(70, 90)
 
         ts = time.time()
-        return {
+        vitals = {
             "HR": {"value": int(round(hr)), "units": "bpm", "timestamp": ts,
                    "upper_threshold": 100, "lower_threshold": 60},
             "Pulse": {"value": int(round(pulse)), "units": "bpm", "timestamp": ts,
@@ -407,6 +464,14 @@ class ECGSimulator:
                            "step_count": int(self._rng.integers(0, 5000)),
                            "time_since_posture_change": int(self._rng.integers(60, 3600))},
         }
+
+        # Add history arrays to each vital
+        for vname, vinfo in vitals.items():
+            vinfo["history"] = self._generate_vital_history(
+                vinfo["value"], vname, ts, condition,
+            )
+
+        return vitals
 
     # --- Pacer ---
 

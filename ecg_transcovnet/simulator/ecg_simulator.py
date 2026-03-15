@@ -169,7 +169,7 @@ class ECGSimulator:
         resp = self._generate_resp(hr, condition)
         vitals = self._generate_vitals(hr, condition)
         pacer_info = self._generate_pacer_info(condition)
-        pacer_offset = self._generate_pacer_offset()
+        pacer_offset = self._generate_pacer_offset(condition)
 
         return SimulatedEvent(
             condition=condition,
@@ -494,6 +494,18 @@ class ECGSimulator:
             | ((flags & 0xFF) << 24)
         )
 
-    def _generate_pacer_offset(self) -> int:
+    def _generate_pacer_offset(self, condition: Condition) -> int:
         max_samples = int(ECG_DURATION * FS_ECG)
-        return int(self._rng.integers(int(max_samples * 0.2), int(max_samples * 0.8)))
+        if condition in (
+            Condition.VENTRICULAR_TACHYCARDIA,
+            Condition.VENTRICULAR_FIBRILLATION,
+            Condition.SINUS_BRADYCARDIA,
+        ):
+            # Early or late offset with 50/50 chance
+            if self._rng.random() < 0.5:
+                lo, hi = 0.10, 0.25  # early
+            else:
+                lo, hi = 0.75, 0.90  # late
+        else:
+            lo, hi = 0.20, 0.80
+        return int(self._rng.integers(int(max_samples * lo), int(max_samples * hi)))

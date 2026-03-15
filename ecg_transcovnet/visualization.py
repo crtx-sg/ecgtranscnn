@@ -63,6 +63,7 @@ def plot_ecg_waveform(
     title: str = "ECG Signal",
     path: str | None = None,
     fs: float = 200.0,
+    pacer_time: float | None = None,
 ):
     """Plot a multi-lead ECG waveform.
 
@@ -85,6 +86,8 @@ def plot_ecg_waveform(
 
     for i, (ax, name) in enumerate(zip(axes, lead_names)):
         ax.plot(time, signal[i], linewidth=0.5)
+        if pacer_time is not None:
+            ax.axvline(pacer_time, color="red", ls="--", alpha=0.6, label="Pacer")
         ax.set_ylabel(name)
         ax.grid(True, alpha=0.3)
 

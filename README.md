@@ -194,7 +194,7 @@ The model classifies 16 cardiac conditions based on MIT-BIH annotation codes:
 
 ## HDF5 Dataset Schema
 
-Each generated file follows the naming convention `PatientID_YYYY-MM.h5` and contains a global metadata group plus one or more event groups. Every vital sign carries a **history array** of time-stamped samples that record the trend leading up to the current value.
+Each generated file follows the naming convention `PatientID_YYYY-MM.h5` and contains a global metadata group plus one or more event groups. Every vital sign carries a **history array** of time-stamped samples that record the trend leading up to the current value. Paced events include **pacer metadata** in the ECG extras, and each alarm-capable vital includes an **`alarm_enabled`** flag.
 
 ```
 PatientID_YYYY-MM.h5
@@ -220,7 +220,7 @@ PatientID_YYYY-MM.h5
 │   │   ├── aVL                    # Augmented L [2400 float32, gzip]
 │   │   ├── aVF                    # Augmented F [2400 float32, gzip]
 │   │   ├── vVX                    # Chest lead  [2400 float32, gzip]
-│   │   └── extras                 # JSON: {"pacer_info": int, "pacer_offset": int}
+│   │   └── extras                 # JSON (see ECG Extras below)
 │   │
 │   ├── ppg/                       # PPG signal group (75 Hz)
 │   │   ├── PPG                    # Photoplethysmogram [900 float32, gzip]
@@ -252,8 +252,7 @@ PatientID_YYYY-MM.h5
 │   │       ├── value              #   int (degrees)
 │   │       ├── units              #   "degrees"
 │   │       ├── timestamp          #   epoch float
-│   │       └── extras             #   JSON: {"step_count", "time_since_posture_change",
-│   │                              #          "history": [...]}
+│   │       └── extras             #   JSON (see Vitals Extras below)
 │   │
 │   ├── timestamp                  # Event epoch timestamp (float)
 │   ├── uuid                       # Unique event identifier (string)
@@ -283,13 +282,13 @@ PatientID_YYYY-MM.h5
 | | `device_info` | bytes | `"RMSAI-SimDevice-v2.0"` | Source device identifier |
 | | `max_vital_history` | int | `30` | Max historical vital samples per vital |
 | `event_XXXX/ecg/` | `ECG1`–`vVX` | float32 | `(2400,)` | 7 leads, 12s at 200 Hz, gzip |
-| | `extras` | bytes | JSON string | Pacer info and offset |
+| | `extras` | bytes | JSON string | Pacer info and offset (see ECG Extras below) |
 | `event_XXXX/ppg/` | `PPG` | float32 | `(900,)` | 12s at 75 Hz, gzip |
 | `event_XXXX/resp/` | `RESP` | float32 | `(~400,)` | 12s at 33.33 Hz, gzip |
 | `event_XXXX/vitals/*/` | `value` | int/float | scalar | Current vital sign measurement |
 | | `units` | bytes | e.g. `"bpm"` | Unit string |
 | | `timestamp` | float | epoch | Measurement time |
-| | `extras` | bytes | JSON string | Thresholds, history, and metadata (see below) |
+| | `extras` | bytes | JSON string | Thresholds, alarm flag, history (see Vitals Extras below) |
 | `event_XXXX/` | `timestamp` | float | epoch | Event timestamp |
 | | `uuid` | string | UUID4 | Unique event ID |
 | *(attrs)* | `condition` | string | e.g. `"AFIB"` | Ground truth condition code |
@@ -303,6 +302,44 @@ PatientID_YYYY-MM.h5
 | ECG (7 leads) | 200 Hz | 12s | 2400 |
 | PPG | 75 Hz | 12s | 900 |
 | Respiratory | 33.33 Hz | 12s | ~400 |
+
+### ECG Extras JSON
+
+The `ecg/extras` dataset is a JSON string containing pacer metadata:
+
+```json
+{
+  "pacer_info": 23042,
+  "pacer_offset": 302
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `pacer_info` | int | Bit-packed pacer descriptor (0 = no pacer). See decoding below. |
+| `pacer_offset` | int | Sample index within the 2400-sample ECG where the pacer fires. Convert to seconds: `pacer_offset / 200.0`. |
+
+**Decoding `pacer_info`**:
+
+The integer packs four bytes: `type | rate<<8 | amplitude<<16 | flags<<24`.
+
+```python
+pacer_type = pacer_info & 0xFF          # 0=None, 1=Single, 2=Dual, 3=Biventricular
+pacer_rate = (pacer_info >> 8) & 0xFF   # pacing rate in bpm (60–100)
+pacer_amp  = (pacer_info >> 16) & 0xFF  # amplitude (1–10)
+pacer_flags = (pacer_info >> 24) & 0xFF # reserved flags (0–15)
+```
+
+| Type code | Pacer type |
+|-----------|------------|
+| 0 | None (no pacer) |
+| 1 | Single chamber |
+| 2 | Dual chamber |
+| 3 | Biventricular |
+
+**Condition-specific pacer offset**: VT/VF and Bradycardia events use bimodal offset placement — early (10–25%) or late (75–90%) in the signal window with 50/50 probability. All other conditions use a uniform 20–80% range.
+
+**Condition-specific pacer probability**: VT/VF events have ~40% chance of a pacer being present; Bradycardia has ~80% chance; all other conditions have ~5% chance.
 
 ### Vital Signs
 
@@ -319,7 +356,7 @@ PatientID_YYYY-MM.h5
 
 ### Vitals Extras JSON
 
-Each vital's `extras` dataset is a JSON string with structure varying by vital type:
+Each vital's `extras` dataset is a JSON string with structure varying by vital type.
 
 **Standard vitals** (HR, Pulse, SpO2, Systolic, Diastolic, RespRate, Temp):
 
@@ -327,15 +364,22 @@ Each vital's `extras` dataset is a JSON string with structure varying by vital t
 {
   "upper_threshold": 100,
   "lower_threshold": 60,
+  "alarm_enabled": true,
   "history": [
     {"value": 75.2, "timestamp": 1741816800.0},
-    {"value": 74.8, "timestamp": 1741816860.0},
-    ...
+    {"value": 74.8, "timestamp": 1741816860.0}
   ]
 }
 ```
 
-**XL_Posture**:
+| Field | Type | Description |
+|-------|------|-------------|
+| `upper_threshold` | number | Upper alarm threshold for this vital. |
+| `lower_threshold` | number | Lower alarm threshold for this vital. |
+| `alarm_enabled` | bool | Whether alarms are active for this vital (always `true` for standard vitals). |
+| `history` | array | Time-ordered historical samples (see Vital History below). |
+
+**XL_Posture** (no alarm thresholds):
 
 ```json
 {
@@ -343,11 +387,16 @@ Each vital's `extras` dataset is a JSON string with structure varying by vital t
   "time_since_posture_change": 1200,
   "history": [
     {"value": 14, "timestamp": 1741816800.0},
-    {"value": 7, "timestamp": 1741816810.0},
-    ...
+    {"value": 7, "timestamp": 1741816810.0}
   ]
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `step_count` | int | Pedometer count since last reset. |
+| `time_since_posture_change` | int | Seconds since last posture change. |
+| `history` | array | Time-ordered historical samples. |
 
 ### Vital History
 
@@ -357,6 +406,25 @@ Each vital carries up to `max_vital_history` (default 30) historical samples in 
 - **Values** interpolate from a condition-dependent baseline toward the current value with jitter, simulating realistic monitor trends
 - History is used by the MEWS history scorer (`compute_mews_history`) and per-event vitals plots
 - The `--verify-history` flag on `generate_hdf5.py` validates history integrity (sort order, sample count, range bounds)
+
+### Reading Pacer Data (Example)
+
+```python
+import h5py, json
+
+hf = h5py.File("PT1234_2026-03.h5", "r")
+ecg_extras = json.loads(hf["event_1001/ecg/extras"][()].decode("utf-8"))
+
+pi = ecg_extras.get("pacer_info", 0)
+pacer_type   = pi & 0xFF            # 0=None, 1=Single, 2=Dual, 3=Biventricular
+pacer_rate   = (pi >> 8) & 0xFF     # bpm
+pacer_offset = ecg_extras.get("pacer_offset", 0)
+pacer_time_s = pacer_offset / 200.0  # seconds into the 12s window
+
+if pacer_type > 0:
+    names = {1: "Single", 2: "Dual", 3: "Biventricular"}
+    print(f"Pacer: {names[pacer_type]} chamber @ {pacer_rate} bpm (offset {pacer_time_s:.1f}s)")
+```
 
 ---
 

@@ -22,6 +22,9 @@ class EventResult:
     pred_prob: float
     match: bool
     vitals: dict
+    pacer_type: int = 0    # 0=None,1=Single,2=Dual,3=Biventricular
+    pacer_rate: int = 0
+    pacer_offset: int = 0
     mews: MEWSResult | None = None
     clinical_notes: list[str] = field(default_factory=list)
     ecg_signal: np.ndarray | None = None
@@ -174,6 +177,8 @@ def generate_report(
                 lines.append("")
 
             if ev.clinical_notes:
+                lines.append("**Care Guidance**")
+                lines.append("")
                 for note in ev.clinical_notes:
                     lines.append(f"- {note}")
                 lines.append("")
@@ -200,6 +205,14 @@ def generate_report(
             lines.append("|----|------|----|----|----|------|")
             lines.append(f"| {hr} | {spo2} | {bp} | {rr} | {temp} | {mews_str} |")
             lines.append("")
+
+            # Pacer info
+            if ev.pacer_type > 0:
+                _pacer_names = {0: "None", 1: "Single", 2: "Dual", 3: "Biventricular"}
+                pname = _pacer_names.get(ev.pacer_type, f"Type {ev.pacer_type}")
+                ptime = ev.pacer_offset / 200.0
+                lines.append(f"**Pacer**: {pname} chamber @ {ev.pacer_rate} bpm (offset {ptime:.1f}s)")
+                lines.append("")
 
             # Per-event plots
             if event_plots and ev.event_id in event_plots:

@@ -174,6 +174,15 @@ def process_file(
             if "ecg" not in grp:
                 continue
             ecg_grp = grp["ecg"]
+            # --- Read pacer info from ECG extras ---
+            pacer_type = pacer_rate = pacer_offset = 0
+            if "extras" in ecg_grp:
+                ecg_ex = json.loads(ecg_grp["extras"][()].decode("utf-8"))
+                pi = ecg_ex.get("pacer_info", 0)
+                pacer_type = pi & 0xFF
+                pacer_rate = (pi >> 8) & 0xFF
+                pacer_offset = ecg_ex.get("pacer_offset", 0)
+
             lead_arrays = []
             for lead in leads:
                 if lead in ecg_grp:
@@ -257,6 +266,9 @@ def process_file(
                 pred_prob=pred_prob,
                 match=match,
                 vitals=vitals,
+                pacer_type=pacer_type,
+                pacer_rate=pacer_rate,
+                pacer_offset=pacer_offset,
                 ecg_signal=signal.copy() if keep_signals else None,
                 vitals_history=vitals_history,
                 vitals_thresholds=vitals_thresholds,

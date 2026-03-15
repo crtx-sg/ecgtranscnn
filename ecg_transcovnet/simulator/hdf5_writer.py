@@ -125,6 +125,7 @@ class HDF5EventWriter:
             if vital_name != "XL_Posture":
                 extras["upper_threshold"] = info.get("upper_threshold", 0)
                 extras["lower_threshold"] = info.get("lower_threshold", 0)
+                extras["alarm_enabled"] = True
             else:
                 extras["step_count"] = info.get("step_count", 0)
                 extras["time_since_posture_change"] = info.get("time_since_posture_change", 0)

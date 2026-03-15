@@ -42,6 +42,7 @@ def plot_event_ecg(
     event_id: str,
     output_path: Path,
     fs: float = 200.0,
+    pacer_offset: int | None = None,
 ) -> None:
     """Plot all-lead ECG waveform for a single event.
 
@@ -50,7 +51,9 @@ def plot_event_ecg(
         event_id: event identifier for the title.
         output_path: where to save the plot.
         fs: sampling frequency in Hz.
+        pacer_offset: pacer offset in samples; drawn as vertical line if > 0.
     """
+    pacer_time = pacer_offset / fs if pacer_offset and pacer_offset > 0 else None
     lead_names = list(ALL_LEADS[: signal.shape[0]])
     plot_ecg_waveform(
         signal,
@@ -58,6 +61,7 @@ def plot_event_ecg(
         title=f"ECG — Event {event_id}",
         path=str(output_path),
         fs=fs,
+        pacer_time=pacer_time,
     )
 
 
@@ -349,7 +353,10 @@ def generate_plots(file_result: FileResult, plot_dir: Path) -> dict[str, dict[st
         # ECG — all leads
         if ev.ecg_signal is not None:
             p = plot_dir / f"{prefix}_ecg_{eid}.png"
-            plot_event_ecg(ev.ecg_signal, eid, p)
+            plot_event_ecg(
+                ev.ecg_signal, eid, p,
+                pacer_offset=ev.pacer_offset if ev.pacer_type else None,
+            )
             plots["ecg"] = p
 
         # Vitals history

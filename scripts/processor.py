@@ -34,7 +34,7 @@ from ecg_transcovnet import (
     FILTER_PRESETS,
     PreprocessingPipeline,
 )
-from ecg_transcovnet.mews import analyze_file, calculate_mews, correlate_ecg_vitals
+from ecg_transcovnet.mews import analyze_file, calculate_mews, correlate_ecg_vitals, assess_event_trends
 from ecg_transcovnet.report import EventResult, FileResult, extract_ids, write_report
 from ecg_transcovnet.plots import generate_plots
 from ecg_transcovnet.simulator.conditions import Condition
@@ -443,6 +443,7 @@ def main() -> None:
                             file_result.clinical_summary.mews_scores,
                         ):
                             ev.mews = mews
+                            ev.vitals_trends = assess_event_trends(ev.vitals_history)
                             ev.clinical_notes = correlate_ecg_vitals(
                                 ev.pred_name, ev.vitals, mews,
                             )

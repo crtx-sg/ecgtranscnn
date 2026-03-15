@@ -460,7 +460,7 @@ This produces a MEWS trend over time for each event, enabling early deterioratio
 
 ### Trend Analysis
 
-`assess_trends()` computes linear regression slopes across events for each vital. When vitals history is available, the full time-series is used instead of single-value-per-event. Trends are classified as "improving", "deteriorating", or "stable" based on a relative-slope threshold.
+`assess_event_trends()` computes per-vital Mann-Kendall trends from each event's own history samples. Trends are classified as "improving", "deteriorating", or "stable" based on statistical significance (p < 0.05).
 
 ### ECG-Vital Correlations
 
@@ -482,15 +482,14 @@ This produces a MEWS trend over time for each event, enabling early deterioratio
 Each processed HDF5 file produces a markdown report (`report-{patient_id}-{alarm_id}.md`) with:
 
 1. **Metadata table** — file, patient ID, alarm ID, event count, generation timestamp
-2. **Summary** — accuracy, overall MEWS trend, clinical alert count
-3. **Event results table** — per-event ground truth, prediction, probability, vitals, MEWS score
-4. **Clinical analysis per event**:
-   - MEWS component breakdown table
-   - Threshold status for each vital (normal / above / below)
-   - History summary (sample count, time span, trend direction)
-   - Clinical correlation notes
-   - **Per-event plots** (ECG, vitals, MEWS history)
-5. **Vital sign trends** — cross-event linear trend table
+2. **Per-event clinical analysis**, each containing:
+   - **ECG Plots** — 7-lead ECG waveform (with pacer marker if paced)
+   - **ECG table** — ground truth, prediction, probability, match
+   - **Vitals at Event** — MEWS component breakdown (Component, Value, Score)
+   - **Threshold Status** — each vital vs. alarm thresholds (normal / above / below)
+   - **Vitals Trend Plots** — vitals history and MEWS history plots
+   - **Vital Sign Trends** — per-event Mann-Kendall slope, direction, p-value
+   - **Care Guidance** — clinical action items (when critical patterns detected)
 
 ### Per-Event Plots (`ecg_transcovnet/plots.py`)
 

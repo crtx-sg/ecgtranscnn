@@ -50,8 +50,6 @@ class TrendAssessment:
 class ClinicalSummary:
     """Aggregated clinical analysis for a file."""
     mews_scores: list[MEWSResult]
-    trends: list[TrendAssessment]
-    overall_trend: str  # "improving", "deteriorating", "stable"
     ecg_vital_correlations: list[str] = field(default_factory=list)
 
 
@@ -345,6 +343,35 @@ def assess_trends(
     return trends
 
 
+def assess_event_trends(vitals_history: dict) -> list[TrendAssessment]:
+    """Compute per-vital trends from a single event's history samples.
+
+    Args:
+        vitals_history: mapping of vital name to list of
+            ``{"value": float, "timestamp": float}`` samples.
+
+    Returns:
+        List of TrendAssessment, one per vital with >= 2 history samples.
+    """
+    vital_keys = ["HR", "SpO2", "Systolic", "Diastolic", "RespRate", "Temp"]
+    trends: list[TrendAssessment] = []
+
+    for key in vital_keys:
+        samples = vitals_history.get(key, [])
+        if len(samples) < 2:
+            continue
+        sorted_samples = sorted(samples, key=lambda s: s["timestamp"])
+        y_vals = [s["value"] for s in sorted_samples]
+        mk = mann_kendall(y_vals)
+        direction = _classify_direction(key, mk)
+        trends.append(TrendAssessment(
+            vital_name=key, direction=direction, slope=mk.slope,
+            values=y_vals, p_value=mk.p_value, significant=mk.p_value < _MK_ALPHA,
+        ))
+
+    return trends
+
+
 def assess_mews_trend(mews_history: list[dict]) -> MKResult | None:
     """Run Mann-Kendall on MEWS total scores from compute_mews_history output."""
     scores = [h["mews"].total_score for h in mews_history]
@@ -398,13 +425,10 @@ def analyze_file(events: list[dict]) -> ClinicalSummary:
         events: list of dicts with keys: condition, vitals (dict with HR, SpO2, etc.)
     """
     mews_scores: list[MEWSResult] = []
-    all_vitals: list[dict] = []
     all_correlations: list[str] = []
 
     for ev in events:
         v = ev.get("vitals", {})
-        all_vitals.append(v)
-
         hr = v.get("HR", 80)
         systolic = v.get("Systolic", 120)
         rr = v.get("RespRate", 16)
@@ -417,28 +441,7 @@ def analyze_file(events: list[dict]) -> ClinicalSummary:
         notes = correlate_ecg_vitals(ev.get("condition", ""), v, mews)
         all_correlations.extend(notes)
 
-    all_histories = [ev.get("vitals_history", {}) for ev in events]
-    trends = assess_trends(all_vitals, event_histories=all_histories)
-
-    # Determine overall trend from MEWS scores
-    if len(mews_scores) >= 2:
-        first_half = mews_scores[: len(mews_scores) // 2]
-        second_half = mews_scores[len(mews_scores) // 2 :]
-        avg_first = sum(m.total_score for m in first_half) / len(first_half)
-        avg_second = sum(m.total_score for m in second_half) / len(second_half)
-        diff = avg_second - avg_first
-        if diff > 0.5:
-            overall = "deteriorating"
-        elif diff < -0.5:
-            overall = "improving"
-        else:
-            overall = "stable"
-    else:
-        overall = "stable"
-
     return ClinicalSummary(
         mews_scores=mews_scores,
-        trends=trends,
-        overall_trend=overall,
         ecg_vital_correlations=all_correlations,
     )

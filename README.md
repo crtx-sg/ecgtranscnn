@@ -1,6 +1,8 @@
 # ECG-TransCovNet
 
-Hybrid CNN-Transformer for ECG arrhythmia classification across 16 cardiac conditions.
+Hybrid CNN-Transformer for ECG arrhythmia classification from 7-lead signals. The class head is
+data-driven: the real-ECG model (`models/real_v2`) predicts **13** rhythm classes, the synthetic
+simulator models predict **16**.
 
 Based on: Shah et al., *"ECG-TransCovNet: A hybrid transformer model for accurate arrhythmia detection using Electrocardiogram signals"*, IET CIT 2024.
 
@@ -22,6 +24,7 @@ Based on: Shah et al., *"ECG-TransCovNet: A hybrid transformer model for accurat
 - [Visualization](#visualization)
 - [Evaluation](#evaluation)
 - [Test & Evaluation Sequence](#test--evaluation-sequence)
+- [Using This Model From Another Project](#using-this-model-from-another-project)
 - [Package Structure](#package-structure)
 - [Requirements](#requirements)
 
@@ -169,7 +172,70 @@ python scripts/evaluate.py \
 
 ## Cardiac Conditions
 
-The model classifies 16 cardiac conditions based on MIT-BIH annotation codes:
+**The class head is data-driven, not fixed.** Each checkpoint stores its own ordered label list in
+`class_names`, and every script sizes the model from it — nothing assumes 16 classes. Two heads
+exist today:
+
+| Head | Classes | Used by |
+|---|---:|---|
+| Simulator (`Condition` enum) | 16 | `models/best_model.pt`, `noise_robust/`, `avblock_fix/` |
+| Real ECG (`ecgpkg` v2 `package.json`) | 13 | `models/real_v2/` — current |
+| Real ECG (`ecgpkg` v1) | 12 | `models/real_v1/` — superseded |
+
+### Real-ECG head — `models/real_v2` (13 classes)
+
+Output index order, exactly as the softmax returns it. F1 is the 5-fold ensemble on the `ecgpkg` v2
+test split (3,513 events); see [Model Performance](#model-performance).
+
+| Idx | Label | MIT-BIH code | Category | Test F1 | Package flags |
+|---:|---|---|---|---:|---|
+| 0 | `NORMAL_SINUS` | N | Normal | 0.873 | — |
+| 1 | `SINUS_BRADYCARDIA` | SB | Normal | 0.743 | — |
+| 2 | `SINUS_TACHYCARDIA` | ST | Normal | 0.837 | — |
+| 3 | `ATRIAL_FIBRILLATION` | AFIB | Supraventricular | 0.753 | — |
+| 4 | `ATRIAL_FLUTTER` | AFL | Supraventricular | 0.098 ⚠ | few subjects, one record dominates |
+| 5 | `PAC` | A | Supraventricular | 0.551 | — |
+| 6 | `SVT` | SVTA | Supraventricular | 0.089 ⚠ | few subjects |
+| 7 | `PVC` | V | Ventricular | 0.833 | — |
+| 8 | `VENTRICULAR_TACHYCARDIA` | VT | Ventricular | 0.421 ⚠ | few subjects, one record dominates |
+| 9 | `VENTRICULAR_FIBRILLATION` | VF | Ventricular | *0.840* ⚠ | **no seven-real-lead events** |
+| 10 | `LBBB` | L | Bundle branch | 0.531 | lead-realism skew |
+| 11 | `RBBB` | R | Bundle branch | 0.920 | lead-realism skew |
+| 12 | `AV_BLOCK_1` | 1AVB | AV block | 0.394 | — |
+
+**The primary metric excludes VF**, not the other flagged classes: macro-F1 over 12 of 13 classes.
+VF's 0.840 is measured entirely on **fabricated-lead data** — no VF event in the package has seven
+measured leads, in any split — so it cannot be read as deployment performance. The other flags mean
+the estimate is noisy, not invalid, so those classes stay in the average with a subject-level CI.
+
+⚠ **Not usable to rule a rhythm out.** ATRIAL_FLUTTER recall 0.062 (6 test subjects, one recording
+supplying most events), SVT recall 0.080 with **AUROC 0.632 — near-random ranking**, VT recall 0.462.
+A missing AFL, SVT or VT prediction carries no information.
+
+**Three `Condition` members are absent from this head**, for two different reasons:
+
+- `AV_BLOCK_2_TYPE1` and `AV_BLOCK_2_TYPE2` are **permanently undetectable from these sources**:
+  MIT-BIH's `(BII` note and PTB-XL's `2AVB` code both mean *Mobitz type unknown*, and separating
+  Wenckebach from Mobitz II needs beat-to-beat PR-interval measurement the annotations do not
+  carry. More subjects cannot fix this.
+- `ST_ELEVATION` is a **data shortage**: 26 eligible events against the 140 the thresholds need.
+
+The model can never predict those three. Ground truth carrying one is reported as
+`n/a (not in head)`, still receives a prediction, and is excluded from accuracy
+(`ecg_transcovnet.classes.NOT_IN_HEAD`).
+
+**Label provenance.** Accuracy tracks how a label was derived (`label_method`), and the two VT
+routes are not the same clinical statement: `beat_run` is a ≥ 3-beat run at > 100 bpm from audited
+beat annotations, possibly non-sustained; `rhythm_annotation` is an adjudicated episode, typically
+sustained. The v2 ensemble scores VT F1 **0.828 on `beat_run` against 0.425 on
+`rhythm_annotation`** — the sustained episodes are the hard ones.
+
+A `NORMAL_SINUS` label from `record_level` means "this patient's ECG was reported as normal", while
+one from `beat_morphology` means "the beats in this window are normal" — not interchangeable claims.
+
+### Simulator head (16 classes)
+
+The synthetic simulator generates all 16 `Condition` members (MIT-BIH annotation codes):
 
 | # | Condition | Code | Category |
 |---|-----------|------|----------|
@@ -189,6 +255,13 @@ The model classifies 16 cardiac conditions based on MIT-BIH annotation codes:
 | 14 | AV Block 2nd Degree Type 1 | 2AVB1 | AV Block |
 | 15 | AV Block 2nd Degree Type 2 | 2AVB2 | AV Block |
 | 16 | ST Elevation | STE | Other |
+
+Simulator-trained checkpoints score 10–26 % accuracy on real ECG and must not be used on real
+recordings — see [Model Performance](#model-performance).
+
+**Single-label, not multi-label.** The head is a softmax over mutually exclusive classes: every
+window gets exactly one prediction, and probabilities sum to 1. A recording that is both AF and
+RBBB can only be reported as one of them.
 
 ---
 
@@ -524,9 +597,59 @@ Output:
 
 ## Model Performance
 
+### Real ECG — current model (`ecgpkg` v2 test split)
+
+`models/real_v2`, a 5-fold cross-validation ensemble on the v2 test split (3,513 events from unseen
+subjects, 13-class head). **Primary metric: macro-F1 over 12 of 13 classes**, excluding
+VENTRICULAR_FIBRILLATION, whose score is measured only on fabricated-lead data. Details and the
+cross-validation protocol: `docs/real-data-training.md` → "Package v2".
+
+| Model | Accuracy | Primary macro-F1, 12 cls (95 % CI) | All-class macro-F1 | Macro recall | Macro AUROC |
+|---|---:|---|---:|---:|---:|
+| Simulator checkpoints (baseline mode, v1 test) | 0.10–0.26 | — | 0.09–0.18 | — | — |
+| **`models/real_v2` 5-fold ensemble** | **0.782** | **0.587 (0.506–0.684)** | 0.606 | 0.653 | 0.942 |
+| `models/real_v2` ensemble, full length | 0.790 | 0.593 | — | — | — |
+
+Cross-validation (the selection signal, over train+val subjects): mean **0.617 ± 0.069** across the
+five folds, range 0.521–0.705. Test sits 0.030 below the CV mean, inside half a fold-sd — expected,
+since the folds and the test split are disjoint subject sets.
+
+**Per real-lead mask — the deployment configuration is now the strongest subset:**
+
+| Real-lead mask | Events | Accuracy | Macro-F1 |
+|---|---:|---:|---:|
+| `1111111` (7 measured — what the monitor sends) | 2,441 | **0.826** | **0.715** |
+| `0100001` (ECG2 + V1) | 728 | 0.659 | 0.484 |
+| `0100000` (ECG2 only) | 344 | 0.727 | 0.464 |
+
+Lead-conversion counterfactual flip rate 0.070 / 0.167, so the lead-realism shortcut stays
+suppressed by `--lead-fab-aug-prob 0.5`.
+
+**What the v2 package fixed, in one number.** On the v1 package, 74 of 111 ventricular-tachycardia
+test events were predicted as PVC — VT was effectively unavailable. On v2 that is **6 of 39**. The
+change came from ecg_sigma's split repair, not from the model: v1 trained VT on 12 %-measured-lead
+VFDB episodes and tested it on 78 %-measured-lead INCART beat-runs, and v2 stratified by
+`(condition, dataset, label_method)` so both sides see the same mixture. VT is still the weakest
+ventricular class (recall 0.462), but its errors now go to AF and VF rather than collapsing into PVC.
+
+**Caveats that travel with these numbers.** Fold-to-fold sd is 0.069, so differences below ~0.07
+between configurations are not resolvable on this data. Accuracy on the 86 paced test events is
+0.602 against 0.786 unpaced, across 3 patients. The degradation is specific to paced atrial
+fibrillation (recall 0.200 on 35 events) — paced PVC is fine at 0.902, above its overall 0.804.
+SVT has AUROC 0.632 — its ranking is near-random. Report files: `models/real_v2/reports/test.{md,json}`, `models/real_v2/cv_summary.json`.
+
+### Real ECG — superseded v1 results (`ecgpkg` v1 test split)
+
+Kept for provenance; **not comparable** to the v2 table above (12-class head, different splits,
+different primary metric). `models/real_v1` 3-seed ensemble: accuracy 0.814, macro-F1 over all 12
+classes 0.668 (0.610–0.777); best single seed 0.798 / 0.667. Full per-class tables, the a–h
+experiment series and the lead-realism analysis: `docs/real-data-training.md`.
+
+### Simulator checkpoints (synthetic validation data)
+
 Three model checkpoints are provided, each trained with different strategies:
 
-### Improved Model (Best) — `models/improved/best_model.pt`
+### Improved Model (Best) — `models/best_model.pt`
 
 Trained on 16,000 clean samples over 83 epochs (early stopping, patience=20).
 
@@ -564,7 +687,7 @@ Trained on 16,000 clean samples over 83 epochs (early stopping, patience=20).
 - Most challenging conditions: Normal Sinus (F1=0.667), AV Block 1st (F1=0.650), LBBB (F1=0.727)
 - Ventricular and supraventricular arrhythmias are classified with near-perfect accuracy
 
-### Baseline Model — `models/baseline/best_model.pt`
+### Baseline Model — *(not retained in this checkout)*
 
 Trained on 4,800 clean samples over 24 epochs.
 
@@ -675,6 +798,85 @@ python scripts/train.py \
 
 Checkpoints, training curves, and confusion matrices are saved to the output directory.
 
+### Training on real ECG (`ecgpkg` packages)
+
+Real recordings come from ecg_sigma as an `ecgpkg` v1 training package (contract:
+`CONTRACT_ecgpkg_v1.md`): a manifest with subject-grouped train/val/test splits, the
+unchanged ecg_sigma HDF5 files, and `package.json` with the class head.
+
+```bash
+python scripts/train.py --data-source package \
+    --package ../ecg_sigma/packages/ecg_pkg_v2.2 \
+    --output-dir models/experiments/my_run \
+    --epochs 40 --patience 10 --time-budget-min 9 --resume
+# Rerun the same command until it prints the test report: each call stops cleanly
+# between epochs before the time budget, and --resume continues from last.pt.
+```
+
+The recipe that produced `models/real_v2` — one run per cross-validation fold, 40 epochs with
+patience 10, ~1–3 h each on an RTX 4050. `--cv-fold N` fits on the other folds, selects on N, and
+never touches the test split:
+
+```bash
+python scripts/train.py --data-source package \
+    --package ../ecg_sigma/packages/ecg_pkg_v2.2 \
+    --cv-fold 0 --output-dir models/experiments/v2_cv_fold0 \
+    --init-checkpoint models/avblock_fix/best_model.pt --init-queries reinit \
+    --crop-len 2000 --filter-preset default \
+    --lead-fab-aug-prob 0.5 --noise-aug-prob 0 \
+    --sampler shuffle --class-weights auto \
+    --epochs 40 --warmup-epochs 3 --patience 10 --workers 14 --seed 42
+```
+
+Repeat for folds 1–4, then evaluate the five checkpoints together as one ensemble. Select on the
+**mean** held-out score: the fold-to-fold sd is 0.069, so a single fold says little.
+
+- **Data-driven head.** The model predicts exactly the classes in `package.json`
+  (12 in v1) in that order; the list is stored in the checkpoint as `class_names`.
+  Nothing assumes 16 classes: processor, validation suite, evaluation and visualisation
+  size the model from the checkpoint.
+- **Memory.** On first use each split is cached as a memory-mapped array under
+  `data/training_cache/<package_version>_<split>_<leads>.npy` (v1: 1.7 GB on disk; building
+  it takes ~1 min with 16 processes and never loads a split into RAM).
+- **Windows.** 12 s sources (2400 samples) and PTB-XL (2000 samples) are mixed by training on
+  random 2000-sample crops; evaluation reports centre-crop 2000 and full length. Inference on
+  12 s device windows uses the full 2400 samples.
+- **Filter preset.** Package runs default to `--filter-preset default` (package signals are
+  already band-passed; re-filtering is harmless and matches unfiltered device input). The
+  preset is saved in the checkpoint and used by `processor.py` unless overridden.
+- **Real-lead caveat.** Only INCART and PTB-XL have seven measured leads. MIT-BIH measures ECG2
+  and V1; VFDB, CUDB and AFDB measure only ECG2 and every other lead is fabricated. VF,
+  most VT and most atrial-flutter windows come from those single-lead sources, so a model can
+  learn "fabricated leads ⇒ ventricular arrhythmia". Evaluate with `scripts/evaluate.py`
+  (per real-lead-mask tables and the lead-conversion counterfactual) and consider
+  `--lead-fab-aug-prob`, which rebuilds the non-ECG2 leads of all-real training windows
+  with ecg_sigma's own rules so that pattern stops predicting the class. **Use it**:
+  `--lead-fab-aug-prob 0.5` cut the lead-conversion flip rate from 0.41 to 0.09 and raised test
+  accuracy from 0.699 to 0.799 — the largest single effect measured (`docs/real-data-training.md`).
+  Training with `--fabricated-leads zero` instead is not a substitute: that model then cannot use
+  the fabricated leads it will be given at inference (0.573 macro-F1).
+- **Selection.** Validation macro-F1 is a noisy selector on this package — val has 3
+  atrial-flutter and 6 VF subjects — and three seeds of one configuration span 0.034 macro-F1 on
+  test. Run 3 seeds before believing a difference, and skip `--calibrate-on val` (it cost
+  0.04–0.05 macro-F1 in every test here).
+- **Speed.** Mixed precision is off for package runs (FP32 is ~2× faster for this model on the
+  RTX 4050); DataLoader workers do cropping, augmentation and filtering (~4–8 ms per item).
+
+| Flag (package runs) | Default | Description |
+|------|---------|-------------|
+| `--data-source` | `sim` | `sim` (simulator) or `package` |
+| `--package` | — | Path to the `ecgpkg` directory |
+| `--crop-len` | 2000 | Training/validation crop length (samples) |
+| `--noise-aug-prob` | 0.5 | Probability of simulator artefact injection, scaled to each lead's amplitude |
+| `--lead-fab-aug-prob` | 0.0 | Probability of rebuilding non-ECG2 leads from ECG2 (lead-realism augmentation) |
+| `--fabricated-leads` | `keep` | `zero` blanks every lead that is not measured |
+| `--sampler` | `shuffle` | `balanced`: equal class mass, prolific subjects damped (`--balance-beta`) |
+| `--class-weights` | `auto` | Focal-loss weights from train counts (`auto`: inverse unless balanced sampler) |
+| `--select-metric` | `macro_f1` | Checkpoint selection on validation macro-F1 or accuracy |
+| `--init-checkpoint` / `--init-queries` | — / `by_name` | Warm start; copy object queries of shared classes or re-initialise |
+| `--resume` / `--time-budget-min` | off / — | Resumable training in time-boxed chunks |
+| `--workers` / `--amp` | 12 / `off` | DataLoader workers / mixed precision |
+
 ### Training Options
 
 | Flag | Default | Description |
@@ -683,7 +885,7 @@ Checkpoints, training curves, and confusion matrices are saved to the output dir
 | `--num-val` | 3200 | Number of validation samples |
 | `--leads` | `all` | Comma-separated lead names, or `all` for all 7 leads |
 | `--noise-level` | `clean` | Noise preset: clean, low, medium, high, mixed |
-| `--filter-preset` | `none` | Preprocessing filter preset: none, default, conservative, aggressive |
+| `--filter-preset` | `none` (sim) / `default` (package) | Preprocessing filter preset: none, default, conservative, aggressive |
 | `--distribution` | `balanced` | Training data distribution: balanced or mit_bih |
 | `--cache-dir` | `data/training_cache` | Cache directory for generated datasets |
 | `--test-dir` | — | Directory with HDF5 test files for post-training evaluation |
@@ -719,6 +921,71 @@ python scripts/processor.py \
     --checkpoint models/noise_robust/best_model.pt \
     --process-existing \
     --plot-dir data/inference/plots
+
+# Real ECG: the recommended real_v2 ensemble (softmax averaged over five checkpoints)
+python scripts/processor.py \
+    --watch-dir data/inference \
+    --checkpoint models/real_v2/fold0.pt models/real_v2/fold1.pt models/real_v2/fold2.pt \
+                 models/real_v2/fold3.pt models/real_v2/fold4.pt \
+    --process-existing
+```
+
+### Ensemble Inference (recommended for real ECG)
+
+`--checkpoint` accepts several paths. Their softmax outputs are averaged, which is the
+combination rule `scripts/evaluate.py` uses, so live predictions match the offline report. The
+`models/real_v2` ensemble scores 0.782 accuracy / 0.587 primary macro-F1 on the v2 test split — see [Model Performance](#model-performance).
+
+```bash
+# Ensemble + per-event plots and markdown reports
+python scripts/processor.py \
+    --watch-dir data/inference \
+    --checkpoint models/real_v2/fold0.pt \
+                 models/real_v2/fold1.pt \
+                 models/real_v2/fold2.pt \
+                 models/real_v2/fold3.pt \
+                 models/real_v2/fold4.pt \
+    --process-existing \
+    --plot-dir data/inference/plots
+```
+
+The banner names the ensemble instead of a single path, and the head, leads and filter preset
+come from its members:
+
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  ECG-TransCovNet Inference Processor                                         ║
+║  Watching: data/inference   Model: ...ensemble (models/real_v2/fold0.pt, ...) ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+  Device: cuda
+  Head: 13 classes · leads 7 · filter preset: default
+
+── PT2901_2026-02.h5 (15 events) ───────────────────────────────────────────
+  Event   Ground Truth                Predicted                   Match    HR   SpO2          BP   RR
+  1002    PAC                         ATRIAL_FIBRILLATION             F    72    96%      114/82   14
+```
+
+Everything downstream is unchanged — prediction, confidence, MEWS, plots and reports all read the
+averaged probabilities. Requirements and costs:
+
+- **Members must agree** on class head, leads and filter preset; `load_models` raises a clear
+  error otherwise (mixing a 16-class simulator checkpoint with a 12-class real-data one fails).
+- **One forward pass per member**, so a 3-model ensemble is ~3× the inference cost. Per event that
+  is still milliseconds; use `models/real_v2/best_model.pt` if you need single-model latency.
+- **Do not add `--calibrate-on val`** when evaluating these checkpoints — the val-fitted logit bias
+  costs 0.04–0.05 macro-F1 (`docs/real-data-training.md`, run h).
+
+The same flag works for offline evaluation:
+
+```bash
+python scripts/evaluate.py \
+    --checkpoint models/real_v2/fold0.pt \
+                 models/real_v2/fold1.pt \
+                 models/real_v2/fold2.pt \
+                 models/real_v2/fold3.pt \
+                 models/real_v2/fold4.pt \
+    --package ../ecg_sigma/packages/ecg_pkg_v2 --split test \
+    --output-dir reports/real_v2_ensemble
 ```
 
 ### Drop Files in Another Terminal
@@ -769,10 +1036,20 @@ When `--plot-dir` is specified, the processor generates 3 plots per event (ECG a
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--watch-dir` | *(required)* | Directory to monitor for new `.h5` files |
-| `--checkpoint` | `models/noise_robust/best_model.pt` | Model checkpoint path |
+| `--checkpoint` | `models/noise_robust/best_model.pt` | Model checkpoint path. Several paths average their softmax outputs as an ensemble; members must share head, leads and filter preset |
 | `--process-existing` | off | Process files already present on startup |
-| `--filter-preset` | `none` | Preprocessing filter preset: none, default, conservative, aggressive |
+| `--filter-preset` | checkpoint's preset | Preprocessing filter preset: none, default, conservative, aggressive (legacy checkpoints record none) |
 | `--plot-dir` | — | Directory for per-event plots (ECG, vitals, MEWS). If omitted, no plots are created |
+
+Ensembling costs one forward pass per member and changes nothing else: the averaged
+probabilities drive the same prediction, confidence, report and plot paths, and the rule matches
+`evaluate.py`, so offline and live numbers agree.
+
+The processor reads simulator files (enum-value conditions, `/metadata` datasets) and
+ecg_sigma files (enum-name conditions, `/metadata` attributes). The class head comes from the
+checkpoint: a ground truth outside the head (e.g. `SVT` for a 12-class real-data model, or
+`OTHER`) is printed as `n/a (not in head)`, still gets a prediction, is excluded from metrics,
+and triggers one warning per label.
 
 ---
 
@@ -987,14 +1264,44 @@ python scripts/evaluate.py \
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--checkpoint` | *(required)* | Model checkpoint path |
+| `--checkpoint` | *(required)* | Model checkpoint path(s); several paths = softmax-averaged ensemble |
 | `--test-dir` | — | Directory with HDF5 test files |
 | `--num-samples` | 1000 | Synthetic samples to evaluate (if no test-dir) |
 | `--noise-level` | `clean` | Noise: clean, low, medium, high, mixed |
-| `--filter-preset` | `none` | Preprocessing filter preset: none, default, conservative, aggressive |
+| `--filter-preset` | checkpoint's preset | Preprocessing filter preset: none, default, conservative, aggressive |
 | `--batch-size` | 64 | Evaluation batch size |
 | `--seed` | 99 | Random seed |
-| `--output-dir` | — | Directory for confusion matrix PNG |
+| `--output-dir` | — | Directory for confusion matrix PNG / package reports |
+
+### Evaluating on a real-data package
+
+```bash
+# Real-data checkpoint on the current test split
+python scripts/evaluate.py --checkpoint models/real_v2/best_model.pt \
+    --package ../ecg_sigma/packages/ecg_pkg_v2.2 --split test --output-dir reports/real_v2
+
+# Legacy 16-class checkpoint: baseline mode is automatic (names mapped into the package
+# head; predictions outside the head count as wrong)
+python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt \
+    --package ../ecg_sigma/packages/ecg_pkg_v2.2 --output-dir reports/baseline_noise_robust
+```
+
+Writes `<split>.json`, `<split>.md` and one confusion-matrix PNG per section:
+centre-crop 2000 and full length, plus the **lead-conversion counterfactual** — events with
+more measured leads are re-predicted after rebuilding their non-ECG2 leads from ECG2 the way
+ecg_sigma fabricates them (`0100001` keeps V1, `0100000` synthesises it). The flip rate and the
+change in predicted AF/AFL/VT/VF share show how much the model relies on lead realism rather
+than rhythm. Every per-class metric carries event and subject counts; macro-F1 has a
+subject-bootstrap 95 % interval; tables are broken down by dataset, label method and real-lead mask.
+
+| Flag (package mode) | Default | Description |
+|------|---------|-------------|
+| `--package` / `--split` | — / `test` | Package directory and split (val or test) |
+| `--crop-len` / `--no-full-length` | 2000 / off | Centre-crop length; skip the full-length section |
+| `--lead-conversion` | `both` | `none`, `0100001`, `0100000` or `both` |
+| `--calibrate-on` | `none` | `val`: fit a per-class logit bias on val macro-F1 and apply it |
+| `--fabricated-leads` | checkpoint's | `keep` or `zero` |
+| `--workers` / `--cache-dir` / `--tag` | 8 / `data/training_cache` / split | Loader workers, cache location, report stem |
 
 ---
 
@@ -1118,7 +1425,7 @@ python scripts/generate_inference_data.py \
     --output-dir data/eval_compare \
     --noise-level medium --conditions balanced --seed 42
 
-for MODEL in models/baseline/best_model.pt models/improved/best_model.pt models/noise_robust/best_model.pt; do
+for MODEL in models/best_model.pt models/noise_robust/best_model.pt models/avblock_fix/best_model.pt; do
     echo "=== Model: ${MODEL} ==="
     python scripts/processor.py \
         --watch-dir data/eval_compare \
@@ -1134,7 +1441,7 @@ done
 python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt --num-samples 1000 --noise-level clean
 python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt --num-samples 1000 --noise-level medium
 python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt --num-samples 1000 --noise-level high
-python scripts/evaluate.py --checkpoint models/improved/best_model.pt --num-samples 1000 --noise-level clean --output-dir results/
+python scripts/evaluate.py --checkpoint models/best_model.pt --num-samples 1000 --noise-level clean --output-dir results/
 
 # With preprocessing filters — compare filtered vs unfiltered on noisy data
 python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt --num-samples 1000 --noise-level high --filter-preset none
@@ -1157,14 +1464,148 @@ python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt --num-
 
 ---
 
+## Using This Model From Another Project
+
+`models/real_v2` is consumable as a library. Everything a caller needs — class head, lead order,
+filter preset — travels inside the checkpoint, so the integration contract is small.
+
+### Input contract
+
+| Property | Value |
+|---|---|
+| Leads | `["ECG1", "ECG2", "ECG3", "aVR", "aVL", "aVF", "vVX"]`, in this order (`vVX` = V1) |
+| Sampling rate | 200 Hz |
+| Window length | 2000–2400 samples (10–12 s). Trained on 2000-sample crops, validated at both |
+| Units | mV |
+| Tensor | `float32`, shape `(batch, 7, samples)` |
+| Preprocessing | the checkpoint's preset (`default` for `real_v2`), applied by `PreprocessingPipeline` |
+
+The `default` preset is a 0.5 Hz high-pass, 50 and 60 Hz notches, a 40 Hz low-pass, then a
+**per-lead z-score**. Feed raw mV in and let the pipeline normalise — do not pre-normalise
+yourself. Re-filtering already-filtered signals is harmless and is what the training data saw.
+
+### Minimal integration
+
+```python
+import numpy as np, torch
+from ecg_transcovnet import FILTER_PRESETS
+from ecg_transcovnet.checkpoint import load_models
+from ecg_transcovnet.preprocessing import PreprocessingPipeline
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# One checkpoint, or several to ensemble them (recommended)
+loaded = load_models([
+    "models/real_v2/fold0.pt",
+    "models/real_v2/fold1.pt",
+    "models/real_v2/fold2.pt",
+    "models/real_v2/fold3.pt",
+    "models/real_v2/fold4.pt",
+], device)
+
+labels = list(loaded.class_spec.names)              # 13 labels, output order
+pipeline = PreprocessingPipeline(FILTER_PRESETS[loaded.filter_preset])
+
+signal = np.zeros((7, 2400), dtype=np.float32)      # your leads, in loaded.leads order, mV
+x = torch.from_numpy(pipeline(signal)).unsqueeze(0).to(device)
+
+with torch.no_grad():
+    probs = torch.softmax(loaded.model(x), dim=-1)[0]
+
+idx = int(probs.argmax())
+print(labels[idx], float(probs[idx]))               # e.g. ATRIAL_FIBRILLATION 0.93
+```
+
+`load_models` returns a `LoadedModel` with `.model`, `.class_spec`, `.leads`, `.filter_preset` and
+the raw `.checkpoint`. Read the head from `.class_spec.names` rather than hard-coding thirteen
+labels — a future package version may change it.
+
+### Output contract
+
+A softmax over `class_spec.names`, single-label: one prediction per window, probabilities sum to 1.
+There is no "unknown" or "other" class and no abstention — an unrecognisable window still produces
+a confident-looking distribution. Feeding the ensemble an all-zeros window returns `PVC` at 0.36,
+not a shrug. If the caller needs a reject option, threshold on the max probability and calibrate
+that threshold on their own data.
+
+### What to tell the other project
+
+Paste this brief into the consuming project's spec or agent prompt:
+
+```text
+Use the ECG-TransCovNet real-ECG model at models/real_v2 (from the ecgtranscnn repo).
+
+Input: 7 leads in the order ECG1, ECG2, ECG3, aVR, aVL, aVF, vVX (vVX = V1), 200 Hz, mV,
+2000-2400 samples per window, float32, shape (batch, 7, samples).
+
+Load with ecg_transcovnet.checkpoint.load_models([...]) and read the label list from the
+returned class_spec.names — do not hard-code labels. Apply PreprocessingPipeline with the
+preset the checkpoint reports (filter_preset), feeding raw mV; it z-scores per lead.
+
+Output: softmax over 13 mutually exclusive rhythm classes, one label per window.
+
+Use the 5-fold ensemble (fold0.pt ... fold4.pt); best_model.pt is a single-model fallback.
+Cost is 5 forward passes.
+
+Trust these classes: NORMAL_SINUS, RBBB, SINUS_TACHYCARDIA, PVC, ATRIAL_FIBRILLATION,
+SINUS_BRADYCARDIA (F1 0.74-0.92). Treat as low-confidence: PAC (0.55), LBBB (0.53, recall
+0.37), AV_BLOCK_1 (0.39, precision 0.25 — it over-triggers on normal sinus).
+
+Do NOT use the model to rule out atrial flutter (recall 0.06), SVT (recall 0.08, AUROC 0.63 —
+its ranking is near-random) or ventricular tachycardia (recall 0.46). A missing AFL, SVT or VT
+prediction means nothing.
+
+VENTRICULAR_FIBRILLATION scores 0.84 F1, but every VF event it was trained and tested on has
+only 1-2 genuinely measured leads; the rest are reconstructed. VF is NOT validated for a
+7-measured-lead monitor. Do not rely on it as an alarm source.
+
+The model cannot predict AV_BLOCK_2_TYPE1, AV_BLOCK_2_TYPE2 (the source annotations cannot
+express Mobitz type — permanently undetectable) or ST_ELEVATION (too little data).
+
+Accuracy by how many leads are genuinely measured: 0.826 with all 7 real (the deployment case),
+0.659 with ECG2+V1, 0.727 with ECG2 only.
+
+Accuracy drops to 0.60 on paced patients (from 0.79). This is specific to paced atrial
+fibrillation, where recall falls to 0.20; paced PVC is unaffected. The model never saw a paced
+beat in training.
+
+Do not apply val-fitted logit bias calibration; it costs 0.04-0.05 macro-F1.
+
+This is a research model trained on one package of public datasets, not a medical device. Do
+not use it for diagnosis or unsupervised alarms.
+```
+
+### Operational notes
+
+- **Fewer real leads cost accuracy.** The model was trained with lead-fabrication augmentation so
+  it does not *depend* on lead realism, but genuinely measured leads still carry information:
+  0.826 accuracy with 7 real leads, 0.659 with ECG2 + V1, 0.727 with ECG2 only.
+- **Paced patients degrade, but only for one class.** 0.602 accuracy on the 88 paced test events
+  (3 patients) vs 0.786 unpaced. It is paced *atrial fibrillation* that fails — recall 0.200 on 35
+  events against 0.818 overall — while paced PVC scores 0.902, above its own overall 0.804. No paced
+  beat appears anywhere in the training split, so this is untrained territory, not a tuning problem.
+- **Windows shorter than 2000 or longer than 2400 samples** are untested. Crop or segment upstream.
+- **Batch for throughput**: preprocessing is ~3.5 ms per item and dominates single-item latency.
+- **Version pinning**: checkpoints record `package_version` and `package_manifest_sha256`, so a
+  consumer can assert which training package a model came from.
+
+---
+
 ## Package Structure
 
 ```
 ecg_transcovnet/                # Python package
   __init__.py                   # Public API exports
   model.py                      # ECGTransCovNet, SKConv, CNNBackbone, FocalLoss
-  preprocessing.py              # FilterConfig, PreprocessingPipeline, preprocess_ecg
+  preprocessing.py              # FilterConfig, PreprocessingPipeline (vectorised), preprocess_ecg
   constants.py                  # NUM_CLASSES, CLASS_NAMES, SIGNAL_LENGTH, ALL_LEADS
+  classes.py                    # ClassSpec — the data-driven class head, condition name resolution
+  checkpoint.py                 # load_model/load_models, EnsembleModel, build_model, warm_start
+  package.py                    # ecgpkg loader, PackageDataset, memmap cache, length-bucket sampler
+  package_eval.py               # Ensemble prediction, softmax averaging, baseline head mapping
+  augment.py                    # Artefact injection, lead fabrication from ECG2
+  evaluation.py                 # Metrics, bootstrap CI, grouped breakdowns, report writing
+  hdf5_io.py                    # Metadata reading for simulator and ecg_sigma files
   data.py                       # Dataset generation, loading, augmentation
   training.py                   # train_one_epoch, validate, evaluate_detailed
   visualization.py              # Plotting utilities (waveforms, confusion matrix, attention)
@@ -1179,22 +1620,41 @@ ecg_transcovnet/                # Python package
     noise.py                    #   Composable noise pipeline (6 artifact types)
 
 scripts/                        # CLI tools
-  train.py                      # Training pipeline (AdamW, cosine LR, focal loss)
-  evaluate.py                   # Formal model evaluation with metrics
+  train.py                      # Training (simulator or ecgpkg package; resumable)
+  evaluate.py                   # Evaluation: package splits, baseline mode, counterfactuals, ensembles
+  compute_auc.py                # AUROC computation
+  processor.py                  # Inference processor (inotify watcher + model + plots + reports)
+  run_validation_suite.py       # Per-condition validation suite
   generate_hdf5.py              # General HDF5 file generation (--verify-history)
   generate_inference_data.py    # Inference data generator (conditions, noise, delay)
   generate_test_data.py         # Per-condition test set generation
-  processor.py                  # Inference processor (inotify watcher + model + plots + reports)
+  generate_validation_suite.py  # Validation suite data generation
+  generate_demo.py              # Demo data generation
   visualize.py                  # Signal/prediction/attention visualization
   visualize_hdf5.py             # HDF5 event inspection and plotting
+  plot_real_data_results.py     # Figures for docs/real-data-training.md
 
-models/                         # Saved checkpoints
-  baseline/best_model.pt        # 87.2% accuracy (4,800 clean samples)
-  improved/best_model.pt        # 90.0% accuracy (16,000 clean samples)
-  noise_robust/best_model.pt    # 87.4% accuracy (16,000 mixed-noise samples)
+models/                         # Saved checkpoints (not tracked by git)
+  best_model.pt                 # Simulator, clean — 16-class head
+  noise_robust/best_model.pt    # Simulator, mixed noise — 16-class head
+  avblock_fix/best_model.pt     # Simulator, AV-block morphology fix — 16-class head
+  real_v2/                      # Real ECG (ecgpkg v2) — 13-class head, recommended
+    fold0.pt ... fold4.pt           #   5-fold CV ensemble members (the artifact)
+    best_model.pt                   #   single-model fallback (copy of fold0.pt)
+    cv_summary.json                 #   per-fold scores and the protocol
+    reports/ confusion_matrix.png   #   the single ensemble test evaluation
+  real_v1/                      # Real ECG (ecgpkg v1) — 12-class head, superseded
+  experiments/                  # Per-run outputs for docs/real-data-training.md
 
-tests/                          # Test suite (pytest)
-  test_preprocessing.py         # Preprocessing pipeline tests (14 tests)
+tests/                          # Test suite (pytest) — 118 passed, 1 skipped
+  test_preprocessing.py         # Filter pipeline
+  test_preprocessing_vectorised.py  # Vectorised pipeline equals the per-lead reference
+  test_classes.py               # ClassSpec, condition-name resolution
+  test_package.py               # ecgpkg contract invariants, loader errors, cache
+  test_train_package.py         # Package training smoke run with resume
+  test_evaluation.py            # Metrics, grouped breakdowns, bootstrap CI
+  test_processor_compat.py      # Processor with legacy and package checkpoints
+  test_model.py test_e2e.py test_simulator.py test_noise_robustness.py
 notebooks/                      # Educational Colab notebook
 ```
 

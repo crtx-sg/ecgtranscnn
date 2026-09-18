@@ -1,8 +1,14 @@
 # ECG-TransCovNet: Project Technical Summary
 
+> **Scope note.** This document describes the **simulator phase**: a 16-class model trained and
+> evaluated on synthetic ECG. Every accuracy figure below (96.4 % clean, 87.4 % noise-robust) is on
+> synthetic data. Those checkpoints score **10–26 %** on real ECG. The current real-data model is
+> the 12-class `models/real_v1` ensemble (0.814 accuracy / 0.668 macro-F1 on the `ecgpkg` v1 test
+> split) — see `docs/real-data-training.md` and the README's Model Performance section.
+
 ## 1. What It Is
 
-ECG-TransCovNet is an AI system that classifies **16 cardiac arrhythmia conditions** from 7-lead ECG signals in real time. It is designed for patient monitoring scenarios where ECG alarms arrive as 12-second signal windows and need automated classification.
+ECG-TransCovNet is an AI system that classifies cardiac arrhythmia conditions from 7-lead ECG signals in real time. The class head is data-driven: the simulator models described here predict **16 conditions**, the real-data model predicts the **12** classes present in the `ecgpkg` v1 package. It is designed for patient monitoring scenarios where ECG alarms arrive as 12-second signal windows and need automated classification.
 
 The system covers the full pipeline from signal generation to real-time inference:
 

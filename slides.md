@@ -128,34 +128,49 @@ PatientID_YYYY-MM.h5
 
 | Parameter | Value |
 |-----------|-------|
-| Optimizer | AdamW, LR 5e-4 |
-| Loss | Focal Loss (gamma=2.0, per-class alpha) |
+| Architecture | ECGTransCNN — 128-dim, 8 heads, 3 enc + 3 dec layers |
+| Optimizer | AdamW, LR 5e-4, cosine annealing + linear warmup |
+| Loss | Focal Loss (gamma=2.0, per-class inverse-frequency alpha) |
 | Epochs | 100 max, early stopping patience=20 |
 | Batch size | 64 |
-| Validation split | 16,000 train / 3,200 val |
+| Data | 16,000 train / 3,200 val (synthetic, 16 classes, 7 leads) |
 | Augmentation | Per-sample noise randomization (mixed mode) |
+| Dropout | 0.1 |
+
+**Three model variants trained:**
 
 ```bash
-# Full training (best accuracy)
-python scripts/train.py --num-train 16000 --epochs 100 --output-dir models/improved
+# Baseline — clean data
+python scripts/train.py --num-train 16000 --epochs 100 --output-dir models/
 
-# Noise-robust (production)
+# Noise-robust — mixed noise for production
 python scripts/train.py --num-train 16000 --noise-level mixed --output-dir models/noise_robust
+
+# AV Block Fix — targeted augmentation for AV block conditions
+python scripts/train.py --num-train 16000 --epochs 100 --output-dir models/avblock_fix
 ```
 
 ---
 
 ## Model Performance
 
-| Model | Accuracy | Macro F1 | Macro Precision | Macro Recall |
-|-------|----------|----------|-----------------|-------------|
-| **Improved (best)** | **90.0%** | **0.893** | 0.896 | 0.895 |
-| Noise-robust | 87.4% | 0.860 | 0.866 | 0.876 |
-| Baseline | 87.2% | 0.869 | 0.875 | 0.870 |
+| Model | Noise | Epochs | Accuracy | Macro F1 | Precision | Recall | Val Loss |
+|-------|-------|--------|----------|----------|-----------|--------|----------|
+| **AV Block Fix (best)** | Clean | **42** | **97.47%** | **0.974** | 0.975 | 0.974 | 0.0196 |
+| Noise-Robust | Mixed | 54 | 87.91% | 0.873 | 0.877 | 0.880 | 0.0966 |
+| Baseline | Clean | 28 | 88.19% | 0.870 | 0.890 | 0.885 | 0.0834 |
 
-**Per-condition highlights (Improved model)**:
-- **Perfect F1 (1.000)**: AFib, AFlutter, SVT, PVC, VTach, VFib, Sinus Tachy, ST Elevation — 9 of 16 conditions
-- **Hardest conditions**: Normal Sinus (0.667), AV Block 1st (0.650), LBBB (0.727) — morphologically subtle differences
+All models stopped early (patience=20) well before the 100-epoch limit.
+
+**Per-condition highlights (AV Block Fix)**:
+- **F1 > 0.98**: AFib, AFlutter, SVT, PVC, VTach, VFib, Sinus Tachy, ST Elevation, RBBB, LBBB, Sinus Brady, PAC
+- **Most improved**: AV Block 1st (0.998 vs. 0.650 baseline), AV Block 2nd Type 1 (0.842)
+- **Hardest condition**: AV Block 2nd Type 1 (0.842) — subtle morphological differences in Wenckebach pattern
+
+**Baseline & Noise-Robust weaknesses**:
+- Normal Sinus (F1 ~0.63–0.67) — overlaps with bradycardia/tachycardia at boundary heart rates
+- AV Block 1st (F1 ~0.65) — only distinguishable by prolonged PR interval
+- PAC (F1 ~0.68) — premature P-wave morphology easily confused with normal variants
 
 ---
 

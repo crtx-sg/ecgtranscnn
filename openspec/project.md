@@ -90,7 +90,7 @@ Four noise presets: clean, low, medium, high
 - Synthetic data only — no real patient data in repository
 - Model designed for 7-lead ECG input (not standard 12-lead)
 - All signals preprocessed via `PreprocessingPipeline` (configurable noise filtering + per-lead z-score normalization)
-- Multi-label classification (sigmoid outputs, not softmax)
+- Single-label classification: softmax over the model head, one class per ECG window (the head is 16 classes for simulator checkpoints and data-driven, from `package.json`, for real-data checkpoints)
 - HDF5 files must conform to Phase-0 schema for pipeline compatibility
 
 ## External Dependencies

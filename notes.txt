@@ -1,0 +1,30 @@
+
+● # Generate test HDF5 with vitals history
+  /home/sganesh/miniconda3/envs/ecgtranscnn/bin/python scripts/generate_hdf5.py 5 --seed 42 --output-dir data/inference --noise-level clean
+
+  # Run inference + per-event plots + report
+  timeout 20 /home/sganesh/miniconda3/envs/ecgtranscnn/bin/python -u scripts/processor.py \
+    --watch-dir data/inference \
+    --checkpoint models/noise_robust/best_model.pt \
+    --process-existing \
+    --plot-dir data/inference/plots
+
+  # Verify outputs
+  ls data/inference/plots/          # should show 15 PNGs (5 ecg + 5 vitals + 5 mews)
+  cat data/inference/report-PT4210-2026-03.md  # per-event #### Plots sections
+
+
+
+----
+## python scripts/visualize_hdf5.py data/eval_clean/*.h5 --list
+
+python scripts/generate_inference_data.py \
+    --num-files 3 --events-per-file 5 \
+    --output-dir data/eval_clean \
+    --noise-level clean --conditions balanced --seed 42
+
+
+python scripts/processor.py \
+    --watch-dir data/eval_clean \
+    --checkpoint models/noise_robust/best_model.pt \
+    --process-existing

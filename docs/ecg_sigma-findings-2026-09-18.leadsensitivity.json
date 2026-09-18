@@ -1,0 +1,207 @@
+{
+ "test_all_classes": {
+  "NORMAL_SINUS": {
+   "events": 1200,
+   "subjects": 649,
+   "recall_real_leads": 0.828,
+   "recall_leads_rebuilt": 0.723,
+   "recall_delta": -0.105,
+   "auroc_real_leads": 0.951,
+   "auroc_leads_rebuilt": 0.943
+  },
+  "SINUS_BRADYCARDIA": {
+   "events": 199,
+   "subjects": 55,
+   "recall_real_leads": 0.819,
+   "recall_leads_rebuilt": 0.749,
+   "recall_delta": -0.07,
+   "auroc_real_leads": 0.972,
+   "auroc_leads_rebuilt": 0.963
+  },
+  "SINUS_TACHYCARDIA": {
+   "events": 132,
+   "subjects": 48,
+   "recall_real_leads": 0.917,
+   "recall_leads_rebuilt": 0.894,
+   "recall_delta": -0.023,
+   "auroc_real_leads": 0.994,
+   "auroc_leads_rebuilt": 0.99
+  },
+  "ATRIAL_FIBRILLATION": {
+   "events": 133,
+   "subjects": 97,
+   "recall_real_leads": 0.917,
+   "recall_leads_rebuilt": 0.895,
+   "recall_delta": -0.023,
+   "auroc_real_leads": 0.983,
+   "auroc_leads_rebuilt": 0.982
+  },
+  "PAC": {
+   "events": 141,
+   "subjects": 28,
+   "recall_real_leads": 0.645,
+   "recall_leads_rebuilt": 0.241,
+   "recall_delta": -0.404,
+   "auroc_real_leads": 0.89,
+   "auroc_leads_rebuilt": 0.827
+  },
+  "PVC": {
+   "events": 530,
+   "subjects": 56,
+   "recall_real_leads": 0.819,
+   "recall_leads_rebuilt": 0.689,
+   "recall_delta": -0.13,
+   "auroc_real_leads": 0.958,
+   "auroc_leads_rebuilt": 0.936
+  },
+  "VENTRICULAR_TACHYCARDIA": {
+   "events": 17,
+   "subjects": 2,
+   "recall_real_leads": 0.706,
+   "recall_leads_rebuilt": 0.353,
+   "recall_delta": -0.353,
+   "auroc_real_leads": 0.995,
+   "auroc_leads_rebuilt": 0.932
+  },
+  "LBBB": {
+   "events": 31,
+   "subjects": 25,
+   "recall_real_leads": 0.968,
+   "recall_leads_rebuilt": 0.903,
+   "recall_delta": -0.065,
+   "auroc_real_leads": 1.0,
+   "auroc_leads_rebuilt": 0.991
+  },
+  "RBBB": {
+   "events": 21,
+   "subjects": 19,
+   "recall_real_leads": 0.905,
+   "recall_leads_rebuilt": 0.524,
+   "recall_delta": -0.381,
+   "auroc_real_leads": 0.991,
+   "auroc_leads_rebuilt": 0.852
+  },
+  "AV_BLOCK_1": {
+   "events": 30,
+   "subjects": 28,
+   "recall_real_leads": 0.9,
+   "recall_leads_rebuilt": 0.8,
+   "recall_delta": -0.1,
+   "auroc_real_leads": 0.99,
+   "auroc_leads_rebuilt": 0.992
+  }
+ },
+ "test_VT_beat_run": {
+  "VENTRICULAR_TACHYCARDIA": {
+   "events": 17,
+   "subjects": 2,
+   "recall_real_leads": 0.706,
+   "recall_leads_rebuilt": 0.353,
+   "recall_delta": -0.353,
+   "auroc_real_leads": null,
+   "auroc_leads_rebuilt": null
+  }
+ },
+ "cv_all_classes": {
+  "NORMAL_SINUS": {
+   "events": 8177,
+   "subjects": 6201,
+   "recall_real_leads": 0.816,
+   "recall_leads_rebuilt": 0.775,
+   "recall_delta": -0.041
+  },
+  "SINUS_BRADYCARDIA": {
+   "events": 1181,
+   "subjects": 456,
+   "recall_real_leads": 0.781,
+   "recall_leads_rebuilt": 0.755,
+   "recall_delta": -0.026
+  },
+  "SINUS_TACHYCARDIA": {
+   "events": 861,
+   "subjects": 414,
+   "recall_real_leads": 0.805,
+   "recall_leads_rebuilt": 0.794,
+   "recall_delta": -0.01
+  },
+  "ATRIAL_FIBRILLATION": {
+   "events": 1126,
+   "subjects": 856,
+   "recall_real_leads": 0.904,
+   "recall_leads_rebuilt": 0.885,
+   "recall_delta": -0.019
+  },
+  "ATRIAL_FLUTTER": {
+   "events": 37,
+   "subjects": 29,
+   "recall_real_leads": 0.622,
+   "recall_leads_rebuilt": 0.622,
+   "recall_delta": 0.0
+  },
+  "PAC": {
+   "events": 676,
+   "subjects": 216,
+   "recall_real_leads": 0.658,
+   "recall_leads_rebuilt": 0.683,
+   "recall_delta": 0.025
+  },
+  "SVT": {
+   "events": 40,
+   "subjects": 30,
+   "recall_real_leads": 0.25,
+   "recall_leads_rebuilt": 0.25,
+   "recall_delta": 0.0
+  },
+  "PVC": {
+   "events": 2460,
+   "subjects": 414,
+   "recall_real_leads": 0.825,
+   "recall_leads_rebuilt": 0.78,
+   "recall_delta": -0.045
+  },
+  "LBBB": {
+   "events": 268,
+   "subjects": 232,
+   "recall_real_leads": 0.937,
+   "recall_leads_rebuilt": 0.69,
+   "recall_delta": -0.246
+  },
+  "RBBB": {
+   "events": 277,
+   "subjects": 169,
+   "recall_real_leads": 0.884,
+   "recall_leads_rebuilt": 0.354,
+   "recall_delta": -0.53
+  },
+  "AV_BLOCK_1": {
+   "events": 284,
+   "subjects": 257,
+   "recall_real_leads": 0.82,
+   "recall_leads_rebuilt": 0.746,
+   "recall_delta": -0.074
+  },
+  "VENTRICULAR_TACHYCARDIA": {
+   "events": 145,
+   "subjects": 5,
+   "recall_real_leads": 0.524,
+   "recall_leads_rebuilt": 0.531,
+   "recall_delta": 0.007
+  }
+ },
+ "cv_VT_beat_run": {
+  "SVT": {
+   "events": 5,
+   "subjects": 2,
+   "recall_real_leads": 0.0,
+   "recall_leads_rebuilt": 0.0,
+   "recall_delta": 0.0
+  },
+  "VENTRICULAR_TACHYCARDIA": {
+   "events": 145,
+   "subjects": 5,
+   "recall_real_leads": 0.524,
+   "recall_leads_rebuilt": 0.531,
+   "recall_delta": 0.007
+  }
+ }
+}

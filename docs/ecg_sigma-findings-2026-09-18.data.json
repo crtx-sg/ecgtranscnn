@@ -1,0 +1,155 @@
+{
+ "ask_a_vt_by_label_method": {
+  "beat_run": {
+   "events": 17,
+   "subjects": 2,
+   "recall": 0.706,
+   "f1": 0.828,
+   "auroc": 0.988
+  },
+  "rhythm_annotation": {
+   "events": 61,
+   "subjects": 7,
+   "recall": 0.393,
+   "f1": 0.425,
+   "auroc": 0.805
+  }
+ },
+ "ask_b_vt_pvc_source_ambiguity": {
+  "vt_test_events_by_source_beat_condition": {
+   "NORMAL_SINUS": 9,
+   "PVC": 14,
+   "RBBB": 2,
+   "": 53
+  },
+  "source_beat_condition=(empty)": {
+   "vt_events": 53,
+   "predicted_VT": 21,
+   "predicted_PVC": 0,
+   "recall": 0.396,
+   "subjects": 3
+  },
+  "source_beat_condition=NORMAL_SINUS": {
+   "vt_events": 9,
+   "predicted_VT": 4,
+   "predicted_PVC": 3,
+   "recall": 0.444,
+   "subjects": 3
+  },
+  "source_beat_condition=PVC": {
+   "vt_events": 14,
+   "predicted_VT": 11,
+   "predicted_PVC": 2,
+   "recall": 0.786,
+   "subjects": 5
+  },
+  "source_beat_condition=RBBB": {
+   "vt_events": 2,
+   "predicted_VT": 0,
+   "predicted_PVC": 1,
+   "recall": 0.0,
+   "subjects": 1
+  },
+  "vt_errors_by_prediction": {
+   "PVC": 6,
+   "ATRIAL_FIBRILLATION": 17,
+   "VENTRICULAR_FIBRILLATION": 12,
+   "ATRIAL_FLUTTER": 3,
+   "SVT": 4
+  },
+  "vt_errors_by_source_rhythm_condition": {
+   "(empty)": 5,
+   "PVC": 1,
+   "NORMAL_SINUS": 5,
+   "ATRIAL_FIBRILLATION": 2,
+   "VENTRICULAR_TACHYCARDIA": 29
+  }
+ },
+ "pacing": {
+  "paced_record": {
+   "test_events": 88,
+   "subjects": 3,
+   "accuracy": 0.602,
+   "unpaced_accuracy": 0.786,
+   "by_true_class": {
+    "SINUS_BRADYCARDIA": {
+     "events": 1,
+     "recall": 0.0
+    },
+    "ATRIAL_FIBRILLATION": {
+     "events": 35,
+     "recall": 0.2
+    },
+    "PVC": {
+     "events": 51,
+     "recall": 0.902
+    },
+    "VENTRICULAR_TACHYCARDIA": {
+     "events": 1,
+     "recall": 0.0
+    }
+   }
+  },
+  "paced_beats": {
+   "test_events": 86,
+   "subjects": 1,
+   "accuracy": 0.616,
+   "unpaced_accuracy": 0.786,
+   "by_true_class": {
+    "ATRIAL_FIBRILLATION": {
+     "events": 35,
+     "recall": 0.2
+    },
+    "PVC": {
+     "events": 50,
+     "recall": 0.92
+    },
+    "VENTRICULAR_TACHYCARDIA": {
+     "events": 1,
+     "recall": 0.0
+    }
+   }
+  }
+ },
+ "afl_svt_by_label_method": {
+  "SVT": {
+   "beat_run": {
+    "events": 5,
+    "subjects": 1,
+    "recall": 0.0,
+    "f1": 0.0,
+    "auroc": 0.871
+   },
+   "record_level": {
+    "events": 4,
+    "subjects": 4,
+    "recall": 0.5,
+    "f1": 0.571,
+    "auroc": 0.996
+   },
+   "rhythm_annotation": {
+    "events": 16,
+    "subjects": 2,
+    "recall": 0.0,
+    "f1": 0.0,
+    "auroc": 0.489
+   }
+  },
+  "ATRIAL_FLUTTER": {
+   "record_level": {
+    "events": 3,
+    "subjects": 3,
+    "recall": 0.667,
+    "f1": 0.667,
+    "auroc": 0.993
+   },
+   "rhythm_annotation": {
+    "events": 45,
+    "subjects": 3,
+    "recall": 0.022,
+    "f1": 0.036,
+    "auroc": 0.816
+   }
+  }
+ }
+}

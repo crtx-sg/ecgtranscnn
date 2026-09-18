@@ -1,0 +1,36 @@
+{
+  "package": "ecg_pkg_v2",
+  "protocol": "5-fold grouped CV over train+val; artifact = 5-model softmax-averaging ensemble (pre-committed before test)",
+  "cv_folds": {
+    "0": {
+      "best_macro_f1_12class": 0.7052,
+      "best_epoch": 10,
+      "epochs_run": 20
+    },
+    "1": {
+      "best_macro_f1_12class": 0.6547,
+      "best_epoch": 23,
+      "epochs_run": 33
+    },
+    "2": {
+      "best_macro_f1_12class": 0.5909,
+      "best_epoch": 37,
+      "epochs_run": 40
+    },
+    "3": {
+      "best_macro_f1_12class": 0.5214,
+      "best_epoch": 12,
+      "epochs_run": 22
+    },
+    "4": {
+      "best_macro_f1_12class": 0.6142,
+      "best_epoch": 8,
+      "epochs_run": 18
+    }
+  },
+  "cv_mean": 0.6173,
+  "cv_sd": 0.069,
+  "primary_metric": "macro-F1 over 12 of 13 classes (excludes VENTRICULAR_FIBRILLATION: no_seven_real_lead_events)",
+  "test_primary_macro_f1": 0.587,
+  "test_accuracy": 0.782
+}

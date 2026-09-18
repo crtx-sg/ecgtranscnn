@@ -1,0 +1,3546 @@
+{
+  "title": "v1 test \u2014 v1_f_leadfab05",
+  "class_names": [
+    "NORMAL_SINUS",
+    "SINUS_BRADYCARDIA",
+    "SINUS_TACHYCARDIA",
+    "ATRIAL_FIBRILLATION",
+    "ATRIAL_FLUTTER",
+    "PAC",
+    "PVC",
+    "VENTRICULAR_TACHYCARDIA",
+    "VENTRICULAR_FIBRILLATION",
+    "LBBB",
+    "RBBB",
+    "AV_BLOCK_1"
+  ],
+  "sections": {
+    "crop2000": {
+      "overall": {
+        "n": 4046,
+        "accuracy": 0.768660405338606,
+        "macro": {
+          "precision": 0.7292411530907578,
+          "recall": 0.6307925183058625,
+          "specificity": 0.9737726385027091,
+          "f1": 0.5990443828285453,
+          "auroc": 0.9406199717815541,
+          "accuracy": 0.768660405338606
+        },
+        "per_class": {
+          "NORMAL_SINUS": {
+            "precision": 0.7798507462686567,
+            "recall": 0.9036442248301421,
+            "specificity": 0.8298310671611042,
+            "f1": 0.8371959942775393,
+            "support": 1619,
+            "subjects": 800,
+            "auroc": 0.9333410191552569
+          },
+          "SINUS_BRADYCARDIA": {
+            "precision": 0.8589743589743589,
+            "recall": 0.1691919191919192,
+            "specificity": 0.996986301369863,
+            "f1": 0.28270042194092826,
+            "support": 396,
+            "subjects": 59,
+            "auroc": 0.9715407499654075
+          },
+          "SINUS_TACHYCARDIA": {
+            "precision": 0.7850877192982456,
+            "recall": 0.9322916666666666,
+            "specificity": 0.9872859366891541,
+            "f1": 0.8523809523809524,
+            "support": 192,
+            "subjects": 50,
+            "auroc": 0.9946727426050856
+          },
+          "ATRIAL_FIBRILLATION": {
+            "precision": 0.8706199460916442,
+            "recall": 0.7654028436018957,
+            "specificity": 0.9867549668874173,
+            "f1": 0.8146279949558637,
+            "support": 422,
+            "subjects": 103,
+            "auroc": 0.9792582101419709
+          },
+          "ATRIAL_FLUTTER": {
+            "precision": 1.0,
+            "recall": 0.05660377358490566,
+            "specificity": 1.0,
+            "f1": 0.10714285714285715,
+            "support": 53,
+            "subjects": 4,
+            "auroc": 0.6789428669983792
+          },
+          "PAC": {
+            "precision": 0.5882352941176471,
+            "recall": 0.5633802816901409,
+            "specificity": 0.985655737704918,
+            "f1": 0.5755395683453237,
+            "support": 142,
+            "subjects": 34,
+            "auroc": 0.8554371825213577
+          },
+          "PVC": {
+            "precision": 0.8061440677966102,
+            "recall": 0.9081145584725537,
+            "specificity": 0.9429551122194514,
+            "f1": 0.8540965207631874,
+            "support": 838,
+            "subjects": 61,
+            "auroc": 0.9540479796927729
+          },
+          "VENTRICULAR_TACHYCARDIA": {
+            "precision": 0.4864864864864865,
+            "recall": 0.16216216216216217,
+            "specificity": 0.9951715374841169,
+            "f1": 0.24324324324324326,
+            "support": 111,
+            "subjects": 7,
+            "auroc": 0.9622743455017915
+          },
+          "VENTRICULAR_FIBRILLATION": {
+            "precision": 0.935064935064935,
+            "recall": 0.7912087912087912,
+            "specificity": 0.9987357774968394,
+            "f1": 0.8571428571428572,
+            "support": 91,
+            "subjects": 6,
+            "auroc": 0.9990747558383463
+          },
+          "LBBB": {
+            "precision": 0.9482758620689655,
+            "recall": 0.6790123456790124,
+            "specificity": 0.9992433795712484,
+            "f1": 0.7913669064748201,
+            "support": 81,
+            "subjects": 26,
+            "auroc": 0.9893699500256877
+          },
+          "RBBB": {
+            "precision": 0.41818181818181815,
+            "recall": 0.971830985915493,
+            "specificity": 0.9758490566037736,
+            "f1": 0.5847457627118644,
+            "support": 71,
+            "subjects": 20,
+            "auroc": 0.9808344406058995
+          },
+          "AV_BLOCK_1": {
+            "precision": 0.273972602739726,
+            "recall": 0.6666666666666666,
+            "specificity": 0.9868027888446215,
+            "f1": 0.3883495145631068,
+            "support": 30,
+            "subjects": 28,
+            "auroc": 0.9886454183266933
+          }
+        },
+        "present_classes": [
+          "NORMAL_SINUS",
+          "SINUS_BRADYCARDIA",
+          "SINUS_TACHYCARDIA",
+          "ATRIAL_FIBRILLATION",
+          "ATRIAL_FLUTTER",
+          "PAC",
+          "PVC",
+          "VENTRICULAR_TACHYCARDIA",
+          "VENTRICULAR_FIBRILLATION",
+          "LBBB",
+          "RBBB",
+          "AV_BLOCK_1"
+        ],
+        "absent_classes": [],
+        "predicted_outside_head": 0,
+        "confusion_matrix": [
+          [
+            1463,
+            10,
+            4,
+            3,
+            0,
+            38,
+            12,
+            0,
+            0,
+            0,
+            63,
+            26
+          ],
+          [
+            323,
+            67,
+            0,
+            0,
+            0,
+            2,
+            1,
+            0,
+            0,
+            1,
+            2,
+            0
+          ],
+          [
+            10,
+            0,
+            179,
+            0,
+            0,
+            1,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            11,
+            0,
+            2,
+            323,
+            0,
+            7,
+            69,
+            0,
+            2,
+            1,
+            1,
+            6
+          ],
+          [
+            0,
+            0,
+            16,
+            34,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            25,
+            0,
+            11,
+            1,
+            0,
+            80,
+            10,
+            0,
+            0,
+            0,
+            15,
+            0
+          ],
+          [
+            35,
+            1,
+            12,
+            7,
+            0,
+            6,
+            761,
+            0,
+            0,
+            1,
+            13,
+            2
+          ],
+          [
+            0,
+            0,
+            1,
+            2,
+            0,
+            0,
+            87,
+            18,
+            3,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            19,
+            72,
+            0,
+            0,
+            0
+          ],
+          [
+            3,
+            0,
+            2,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            55,
+            1,
+            19
+          ],
+          [
+            0,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            69,
+            0
+          ],
+          [
+            6,
+            0,
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            20
+          ]
+        ],
+        "macro_f1_ci95": [
+          0.5470149999443958,
+          0.7274425653210637
+        ]
+      },
+      "low_subject_classes": [
+        "ATRIAL_FLUTTER"
+      ],
+      "by_dataset": {
+        "afdb": {
+          "n": 260,
+          "accuracy": 0.5538461538461539,
+          "macro_f1": 0.39007416438077824,
+          "macro_recall": 0.3504761904761905,
+          "per_class": {
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.680952380952381,
+              "f1": 0.7409326424870467,
+              "support": 210,
+              "subjects": 5
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.02,
+              "f1": 0.0392156862745098,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        },
+        "cudb": {
+          "n": 41,
+          "accuracy": 0.8048780487804879,
+          "macro_f1": 0.8918918918918919,
+          "macro_recall": 0.8048780487804879,
+          "per_class": {
+            "VENTRICULAR_FIBRILLATION": {
+              "recall": 0.8048780487804879,
+              "f1": 0.8918918918918919,
+              "support": 41,
+              "subjects": 5
+            }
+          }
+        },
+        "incart": {
+          "n": 1512,
+          "accuracy": 0.7202380952380952,
+          "macro_f1": 0.5836522342315882,
+          "macro_recall": 0.5703849487832134,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.7991266375545851,
+              "f1": 0.7204724409448818,
+              "support": 458,
+              "subjects": 5
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.2233502538071066,
+              "f1": 0.36065573770491804,
+              "support": 197,
+              "subjects": 3
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9411764705882353,
+              "f1": 0.9045936395759717,
+              "support": 136,
+              "subjects": 4
+            },
+            "PAC": {
+              "recall": 0.5,
+              "f1": 0.5154639175257731,
+              "support": 50,
+              "subjects": 4
+            },
+            "PVC": {
+              "recall": 0.8888888888888888,
+              "f1": 0.8702928870292886,
+              "support": 585,
+              "subjects": 5
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.06976744186046512,
+              "f1": 0.13043478260869565,
+              "support": 86,
+              "subjects": 1
+            }
+          }
+        },
+        "mitbih": {
+          "n": 937,
+          "accuracy": 0.7033084311632871,
+          "macro_f1": 0.6370652445962743,
+          "macro_recall": 0.6300280752776892,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.8766666666666667,
+              "f1": 0.7175989085948158,
+              "support": 300,
+              "subjects": 6
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.013793103448275862,
+              "f1": 0.027210884353741496,
+              "support": 145,
+              "subjects": 4
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.8,
+              "f1": 0.64,
+              "support": 10,
+              "subjects": 2
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.79,
+              "f1": 0.858695652173913,
+              "support": 100,
+              "subjects": 2
+            },
+            "PAC": {
+              "recall": 0.5373134328358209,
+              "f1": 0.6371681415929203,
+              "support": 67,
+              "subjects": 5
+            },
+            "PVC": {
+              "recall": 0.9458128078817734,
+              "f1": 0.8847926267281107,
+              "support": 203,
+              "subjects": 6
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.16666666666666666,
+              "f1": 0.2857142857142857,
+              "support": 12,
+              "subjects": 4
+            },
+            "LBBB": {
+              "recall": 0.54,
+              "f1": 0.6923076923076923,
+              "support": 50,
+              "subjects": 1
+            },
+            "RBBB": {
+              "recall": 1.0,
+              "f1": 0.99009900990099,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        },
+        "ptbxl": {
+          "n": 1233,
+          "accuracy": 0.9213300892133008,
+          "macro_f1": 0.8182738641990944,
+          "macro_recall": 0.8075419371399685,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.9686411149825784,
+              "f1": 0.9591719378953422,
+              "support": 861,
+              "subjects": 789
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.3888888888888889,
+              "f1": 0.5060240963855421,
+              "support": 54,
+              "subjects": 52
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9347826086956522,
+              "f1": 0.8958333333333334,
+              "support": 46,
+              "subjects": 44
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.9017857142857143,
+              "f1": 0.9308755760368663,
+              "support": 112,
+              "subjects": 96
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.6666666666666666,
+              "f1": 0.8,
+              "support": 3,
+              "subjects": 3
+            },
+            "PAC": {
+              "recall": 0.76,
+              "f1": 0.6031746031746031,
+              "support": 25,
+              "subjects": 25
+            },
+            "PVC": {
+              "recall": 0.98,
+              "f1": 0.9158878504672898,
+              "support": 50,
+              "subjects": 50
+            },
+            "LBBB": {
+              "recall": 0.9032258064516129,
+              "f1": 0.9333333333333333,
+              "support": 31,
+              "subjects": 25
+            },
+            "RBBB": {
+              "recall": 0.9047619047619048,
+              "f1": 0.8837209302325582,
+              "support": 21,
+              "subjects": 19
+            },
+            "AV_BLOCK_1": {
+              "recall": 0.6666666666666666,
+              "f1": 0.7547169811320754,
+              "support": 30,
+              "subjects": 28
+            }
+          }
+        },
+        "vfdb": {
+          "n": 63,
+          "accuracy": 0.7777777777777778,
+          "macro_f1": 0.7180306905370843,
+          "macro_recall": 0.7746153846153847,
+          "per_class": {
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.7692307692307693,
+              "f1": 0.588235294117647,
+              "support": 13,
+              "subjects": 2
+            },
+            "VENTRICULAR_FIBRILLATION": {
+              "recall": 0.78,
+              "f1": 0.8478260869565217,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        }
+      },
+      "by_label_method": {
+        "beat_morphology": {
+          "n": 1763,
+          "accuracy": 0.8389109472490074,
+          "macro_f1": 0.7208636212616388,
+          "macro_recall": 0.7589472248579974,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.8298153034300791,
+              "f1": 0.8699861687413554,
+              "support": 758,
+              "subjects": 11
+            },
+            "PAC": {
+              "recall": 0.5213675213675214,
+              "f1": 0.583732057416268,
+              "support": 117,
+              "subjects": 9
+            },
+            "PVC": {
+              "recall": 0.9035532994923858,
+              "f1": 0.9374588545095457,
+              "support": 788,
+              "subjects": 11
+            },
+            "LBBB": {
+              "recall": 0.54,
+              "f1": 0.6923076923076923,
+              "support": 50,
+              "subjects": 1
+            },
+            "RBBB": {
+              "recall": 1.0,
+              "f1": 0.5208333333333333,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        },
+        "beat_run": {
+          "n": 86,
+          "accuracy": 0.06976744186046512,
+          "macro_f1": 0.13043478260869565,
+          "macro_recall": 0.06976744186046512,
+          "per_class": {
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.06976744186046512,
+              "f1": 0.13043478260869565,
+              "support": 86,
+              "subjects": 1
+            }
+          }
+        },
+        "rate_derived": {
+          "n": 488,
+          "accuracy": 0.3729508196721312,
+          "macro_f1": 0.6008262045770271,
+          "macro_recall": 0.5330048866458383,
+          "per_class": {
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.13450292397660818,
+              "f1": 0.23711340206185566,
+              "support": 342,
+              "subjects": 7
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9315068493150684,
+              "f1": 0.9645390070921985,
+              "support": 146,
+              "subjects": 6
+            }
+          }
+        },
+        "record_level": {
+          "n": 1233,
+          "accuracy": 0.9213300892133008,
+          "macro_f1": 0.8182738641990944,
+          "macro_recall": 0.8075419371399685,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.9686411149825784,
+              "f1": 0.9591719378953422,
+              "support": 861,
+              "subjects": 789
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.3888888888888889,
+              "f1": 0.5060240963855421,
+              "support": 54,
+              "subjects": 52
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9347826086956522,
+              "f1": 0.8958333333333334,
+              "support": 46,
+              "subjects": 44
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.9017857142857143,
+              "f1": 0.9308755760368663,
+              "support": 112,
+              "subjects": 96
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.6666666666666666,
+              "f1": 0.8,
+              "support": 3,
+              "subjects": 3
+            },
+            "PAC": {
+              "recall": 0.76,
+              "f1": 0.6031746031746031,
+              "support": 25,
+              "subjects": 25
+            },
+            "PVC": {
+              "recall": 0.98,
+              "f1": 0.9158878504672898,
+              "support": 50,
+              "subjects": 50
+            },
+            "LBBB": {
+              "recall": 0.9032258064516129,
+              "f1": 0.9333333333333333,
+              "support": 31,
+              "subjects": 25
+            },
+            "RBBB": {
+              "recall": 0.9047619047619048,
+              "f1": 0.8837209302325582,
+              "support": 21,
+              "subjects": 19
+            },
+            "AV_BLOCK_1": {
+              "recall": 0.6666666666666666,
+              "f1": 0.7547169811320754,
+              "support": 30,
+              "subjects": 28
+            }
+          }
+        },
+        "rhythm_annotation": {
+          "n": 476,
+          "accuracy": 0.6449579831932774,
+          "macro_f1": 0.5269996887643946,
+          "macro_recall": 0.5018344558667139,
+          "per_class": {
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.7161290322580646,
+              "f1": 0.783068783068783,
+              "support": 310,
+              "subjects": 7
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.02,
+              "f1": 0.0392156862745098,
+              "support": 50,
+              "subjects": 1
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.48,
+              "f1": 0.42857142857142855,
+              "support": 25,
+              "subjects": 6
+            },
+            "VENTRICULAR_FIBRILLATION": {
+              "recall": 0.7912087912087912,
+              "f1": 0.8571428571428572,
+              "support": 91,
+              "subjects": 6
+            }
+          }
+        }
+      },
+      "by_real_lead_mask": {
+        "0100000": {
+          "n": 364,
+          "accuracy": 0.6208791208791209,
+          "macro_f1": 0.5283704155237224,
+          "macro_recall": 0.5653479853479854,
+          "per_class": {
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.680952380952381,
+              "f1": 0.7409326424870467,
+              "support": 210,
+              "subjects": 5
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.02,
+              "f1": 0.0392156862745098,
+              "support": 50,
+              "subjects": 1
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.7692307692307693,
+              "f1": 0.47619047619047616,
+              "support": 13,
+              "subjects": 2
+            },
+            "VENTRICULAR_FIBRILLATION": {
+              "recall": 0.7912087912087912,
+              "f1": 0.8571428571428572,
+              "support": 91,
+              "subjects": 6
+            }
+          }
+        },
+        "0100001": {
+          "n": 937,
+          "accuracy": 0.7033084311632871,
+          "macro_f1": 0.6370652445962743,
+          "macro_recall": 0.6300280752776892,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.8766666666666667,
+              "f1": 0.7175989085948158,
+              "support": 300,
+              "subjects": 6
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.013793103448275862,
+              "f1": 0.027210884353741496,
+              "support": 145,
+              "subjects": 4
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.8,
+              "f1": 0.64,
+              "support": 10,
+              "subjects": 2
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.79,
+              "f1": 0.858695652173913,
+              "support": 100,
+              "subjects": 2
+            },
+            "PAC": {
+              "recall": 0.5373134328358209,
+              "f1": 0.6371681415929203,
+              "support": 67,
+              "subjects": 5
+            },
+            "PVC": {
+              "recall": 0.9458128078817734,
+              "f1": 0.8847926267281107,
+              "support": 203,
+              "subjects": 6
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.16666666666666666,
+              "f1": 0.2857142857142857,
+              "support": 12,
+              "subjects": 4
+            },
+            "LBBB": {
+              "recall": 0.54,
+              "f1": 0.6923076923076923,
+              "support": 50,
+              "subjects": 1
+            },
+            "RBBB": {
+              "recall": 1.0,
+              "f1": 0.99009900990099,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        },
+        "1111111": {
+          "n": 2745,
+          "accuracy": 0.8105646630236795,
+          "macro_f1": 0.6730007531163469,
+          "macro_recall": 0.7003553253581306,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.9097801364670205,
+              "f1": 0.8711433756805806,
+              "support": 1319,
+              "subjects": 794
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.2589641434262948,
+              "f1": 0.3975535168195718,
+              "support": 251,
+              "subjects": 55
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9395604395604396,
+              "f1": 0.9023746701846965,
+              "support": 182,
+              "subjects": 48
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.9017857142857143,
+              "f1": 0.905829596412556,
+              "support": 112,
+              "subjects": 96
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.6666666666666666,
+              "f1": 0.8,
+              "support": 3,
+              "subjects": 3
+            },
+            "PAC": {
+              "recall": 0.5866666666666667,
+              "f1": 0.5499999999999999,
+              "support": 75,
+              "subjects": 29
+            },
+            "PVC": {
+              "recall": 0.8960629921259843,
+              "f1": 0.8740399385560675,
+              "support": 635,
+              "subjects": 55
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.06976744186046512,
+              "f1": 0.13043478260869565,
+              "support": 86,
+              "subjects": 1
+            },
+            "LBBB": {
+              "recall": 0.9032258064516129,
+              "f1": 0.9333333333333333,
+              "support": 31,
+              "subjects": 25
+            },
+            "RBBB": {
+              "recall": 0.9047619047619048,
+              "f1": 0.28358208955223885,
+              "support": 21,
+              "subjects": 19
+            },
+            "AV_BLOCK_1": {
+              "recall": 0.6666666666666666,
+              "f1": 0.7547169811320754,
+              "support": 30,
+              "subjects": 28
+            }
+          }
+        }
+      }
+    },
+    "full": {
+      "overall": {
+        "n": 4046,
+        "accuracy": 0.7805239742956006,
+        "macro": {
+          "precision": 0.7333542999497297,
+          "recall": 0.6355652872137538,
+          "specificity": 0.9753896470421108,
+          "f1": 0.6057948275667308,
+          "auroc": 0.9508428713584142,
+          "accuracy": 0.7805239742956006
+        },
+        "per_class": {
+          "NORMAL_SINUS": {
+            "precision": 0.8017572762218561,
+            "recall": 0.9017912291537986,
+            "specificity": 0.8512566955088586,
+            "f1": 0.8488372093023255,
+            "support": 1619,
+            "subjects": 800,
+            "auroc": 0.9384431833249222
+          },
+          "SINUS_BRADYCARDIA": {
+            "precision": 0.8735632183908046,
+            "recall": 0.1919191919191919,
+            "specificity": 0.996986301369863,
+            "f1": 0.3146997929606625,
+            "support": 396,
+            "subjects": 59,
+            "auroc": 0.9714418154144182
+          },
+          "SINUS_TACHYCARDIA": {
+            "precision": 0.8144796380090498,
+            "recall": 0.9375,
+            "specificity": 0.9893617021276596,
+            "f1": 0.8716707021791767,
+            "support": 192,
+            "subjects": 50,
+            "auroc": 0.9957633303061754
+          },
+          "ATRIAL_FIBRILLATION": {
+            "precision": 0.8507853403141361,
+            "recall": 0.7701421800947867,
+            "specificity": 0.984271523178808,
+            "f1": 0.8084577114427861,
+            "support": 422,
+            "subjects": 103,
+            "auroc": 0.9789920801816222
+          },
+          "ATRIAL_FLUTTER": {
+            "precision": 1.0,
+            "recall": 0.03773584905660377,
+            "specificity": 1.0,
+            "f1": 0.07272727272727272,
+            "support": 53,
+            "subjects": 4,
+            "auroc": 0.7543436863567847
+          },
+          "PAC": {
+            "precision": 0.6131386861313869,
+            "recall": 0.5915492957746479,
+            "specificity": 0.9864241803278688,
+            "f1": 0.6021505376344085,
+            "support": 142,
+            "subjects": 34,
+            "auroc": 0.8773630512583699
+          },
+          "PVC": {
+            "precision": 0.802407221664995,
+            "recall": 0.954653937947494,
+            "specificity": 0.9385910224438903,
+            "f1": 0.8719346049046321,
+            "support": 838,
+            "subjects": 61,
+            "auroc": 0.9747376040804909
+          },
+          "VENTRICULAR_TACHYCARDIA": {
+            "precision": 0.41025641025641024,
+            "recall": 0.14414414414414414,
+            "specificity": 0.9941550190597205,
+            "f1": 0.21333333333333335,
+            "support": 111,
+            "subjects": 7,
+            "auroc": 0.9601268358574585
+          },
+          "VENTRICULAR_FIBRILLATION": {
+            "precision": 0.9210526315789473,
+            "recall": 0.7692307692307693,
+            "specificity": 0.9984829329962074,
+            "f1": 0.8383233532934132,
+            "support": 91,
+            "subjects": 6,
+            "auroc": 0.9990497492393826
+          },
+          "LBBB": {
+            "precision": 0.9827586206896551,
+            "recall": 0.7037037037037037,
+            "specificity": 0.9997477931904162,
+            "f1": 0.8201438848920862,
+            "support": 81,
+            "subjects": 26,
+            "auroc": 0.9888437407563091
+          },
+          "RBBB": {
+            "precision": 0.422360248447205,
+            "recall": 0.9577464788732394,
+            "specificity": 0.9766037735849057,
+            "f1": 0.5862068965517241,
+            "support": 71,
+            "subjects": 20,
+            "auroc": 0.9799486225529276
+          },
+          "AV_BLOCK_1": {
+            "precision": 0.3076923076923077,
+            "recall": 0.6666666666666666,
+            "specificity": 0.9887948207171314,
+            "f1": 0.42105263157894735,
+            "support": 30,
+            "subjects": 28,
+            "auroc": 0.9910607569721116
+          }
+        },
+        "present_classes": [
+          "NORMAL_SINUS",
+          "SINUS_BRADYCARDIA",
+          "SINUS_TACHYCARDIA",
+          "ATRIAL_FIBRILLATION",
+          "ATRIAL_FLUTTER",
+          "PAC",
+          "PVC",
+          "VENTRICULAR_TACHYCARDIA",
+          "VENTRICULAR_FIBRILLATION",
+          "LBBB",
+          "RBBB",
+          "AV_BLOCK_1"
+        ],
+        "absent_classes": [],
+        "predicted_outside_head": 0,
+        "confusion_matrix": [
+          [
+            1460,
+            9,
+            3,
+            5,
+            0,
+            36,
+            18,
+            0,
+            0,
+            0,
+            64,
+            24
+          ],
+          [
+            313,
+            76,
+            0,
+            0,
+            0,
+            2,
+            2,
+            0,
+            0,
+            1,
+            2,
+            0
+          ],
+          [
+            8,
+            0,
+            180,
+            0,
+            0,
+            1,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            1,
+            2,
+            325,
+            0,
+            7,
+            65,
+            2,
+            2,
+            0,
+            1,
+            7
+          ],
+          [
+            0,
+            0,
+            14,
+            37,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            18,
+            0,
+            12,
+            2,
+            0,
+            84,
+            13,
+            0,
+            0,
+            0,
+            13,
+            0
+          ],
+          [
+            3,
+            1,
+            7,
+            10,
+            0,
+            5,
+            800,
+            0,
+            0,
+            0,
+            12,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            89,
+            16,
+            4,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            21,
+            70,
+            0,
+            0,
+            0
+          ],
+          [
+            3,
+            0,
+            2,
+            0,
+            0,
+            0,
+            5,
+            0,
+            0,
+            57,
+            0,
+            14
+          ],
+          [
+            0,
+            0,
+            1,
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            68,
+            0
+          ],
+          [
+            6,
+            0,
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            20
+          ]
+        ],
+        "macro_f1_ci95": [
+          0.5535326381405594,
+          0.7304803578559598
+        ]
+      },
+      "low_subject_classes": [
+        "ATRIAL_FLUTTER"
+      ],
+      "by_dataset": {
+        "afdb": {
+          "n": 260,
+          "accuracy": 0.5615384615384615,
+          "macro_f1": 0.37244897959183676,
+          "macro_recall": 0.3476190476190476,
+          "per_class": {
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.6952380952380952,
+              "f1": 0.7448979591836735,
+              "support": 210,
+              "subjects": 5
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.0,
+              "f1": 0.0,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        },
+        "cudb": {
+          "n": 41,
+          "accuracy": 0.8048780487804879,
+          "macro_f1": 0.8918918918918919,
+          "macro_recall": 0.8048780487804879,
+          "per_class": {
+            "VENTRICULAR_FIBRILLATION": {
+              "recall": 0.8048780487804879,
+              "f1": 0.8918918918918919,
+              "support": 41,
+              "subjects": 5
+            }
+          }
+        },
+        "incart": {
+          "n": 1512,
+          "accuracy": 0.7427248677248677,
+          "macro_f1": 0.604665915067382,
+          "macro_recall": 0.5907961677867343,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.7903930131004366,
+              "f1": 0.7410440122824974,
+              "support": 458,
+              "subjects": 5
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.2639593908629442,
+              "f1": 0.4143426294820718,
+              "support": 197,
+              "subjects": 3
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9338235294117647,
+              "f1": 0.9202898550724637,
+              "support": 136,
+              "subjects": 4
+            },
+            "PAC": {
+              "recall": 0.56,
+              "f1": 0.5490196078431373,
+              "support": 50,
+              "subjects": 4
+            },
+            "PVC": {
+              "recall": 0.9384615384615385,
+              "f1": 0.8934092758340115,
+              "support": 585,
+              "subjects": 5
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.05813953488372093,
+              "f1": 0.10989010989010987,
+              "support": 86,
+              "subjects": 1
+            }
+          }
+        },
+        "mitbih": {
+          "n": 937,
+          "accuracy": 0.7193169690501601,
+          "macro_f1": 0.6565594684221008,
+          "macro_recall": 0.6616298910483162,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.88,
+              "f1": 0.735376044568245,
+              "support": 300,
+              "subjects": 6
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.020689655172413793,
+              "f1": 0.040540540540540536,
+              "support": 145,
+              "subjects": 4
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 1.0,
+              "f1": 0.7407407407407407,
+              "support": 10,
+              "subjects": 2
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.78,
+              "f1": 0.8387096774193548,
+              "support": 100,
+              "subjects": 2
+            },
+            "PAC": {
+              "recall": 0.5522388059701493,
+              "f1": 0.6788990825688074,
+              "support": 67,
+              "subjects": 5
+            },
+            "PVC": {
+              "recall": 0.9950738916256158,
+              "f1": 0.8840262582056894,
+              "support": 203,
+              "subjects": 6
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.16666666666666666,
+              "f1": 0.26666666666666666,
+              "support": 12,
+              "subjects": 4
+            },
+            "LBBB": {
+              "recall": 0.58,
+              "f1": 0.7341772151898733,
+              "support": 50,
+              "subjects": 1
+            },
+            "RBBB": {
+              "recall": 0.98,
+              "f1": 0.98989898989899,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        },
+        "ptbxl": {
+          "n": 1233,
+          "accuracy": 0.9213300892133008,
+          "macro_f1": 0.8182738641990944,
+          "macro_recall": 0.8075419371399685,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.9686411149825784,
+              "f1": 0.9591719378953422,
+              "support": 861,
+              "subjects": 789
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.3888888888888889,
+              "f1": 0.5060240963855421,
+              "support": 54,
+              "subjects": 52
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9347826086956522,
+              "f1": 0.8958333333333334,
+              "support": 46,
+              "subjects": 44
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.9017857142857143,
+              "f1": 0.9308755760368663,
+              "support": 112,
+              "subjects": 96
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.6666666666666666,
+              "f1": 0.8,
+              "support": 3,
+              "subjects": 3
+            },
+            "PAC": {
+              "recall": 0.76,
+              "f1": 0.6031746031746031,
+              "support": 25,
+              "subjects": 25
+            },
+            "PVC": {
+              "recall": 0.98,
+              "f1": 0.9158878504672898,
+              "support": 50,
+              "subjects": 50
+            },
+            "LBBB": {
+              "recall": 0.9032258064516129,
+              "f1": 0.9333333333333333,
+              "support": 31,
+              "subjects": 25
+            },
+            "RBBB": {
+              "recall": 0.9047619047619048,
+              "f1": 0.8837209302325582,
+              "support": 21,
+              "subjects": 19
+            },
+            "AV_BLOCK_1": {
+              "recall": 0.6666666666666666,
+              "f1": 0.7547169811320754,
+              "support": 30,
+              "subjects": 28
+            }
+          }
+        },
+        "vfdb": {
+          "n": 63,
+          "accuracy": 0.7301587301587301,
+          "macro_f1": 0.6637362637362637,
+          "macro_recall": 0.7161538461538461,
+          "per_class": {
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.6923076923076923,
+              "f1": 0.5142857142857142,
+              "support": 13,
+              "subjects": 2
+            },
+            "VENTRICULAR_FIBRILLATION": {
+              "recall": 0.74,
+              "f1": 0.8131868131868132,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        }
+      },
+      "by_label_method": {
+        "beat_morphology": {
+          "n": 1763,
+          "accuracy": 0.8621667612024957,
+          "macro_f1": 0.7443420119267102,
+          "macro_recall": 0.7788917521247323,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.8258575197889182,
+              "f1": 0.8917378917378916,
+              "support": 758,
+              "subjects": 11
+            },
+            "PAC": {
+              "recall": 0.5555555555555556,
+              "f1": 0.6190476190476191,
+              "support": 117,
+              "subjects": 9
+            },
+            "PVC": {
+              "recall": 0.9530456852791879,
+              "f1": 0.9554707379134861,
+              "support": 788,
+              "subjects": 11
+            },
+            "LBBB": {
+              "recall": 0.58,
+              "f1": 0.7341772151898733,
+              "support": 50,
+              "subjects": 1
+            },
+            "RBBB": {
+              "recall": 0.98,
+              "f1": 0.5212765957446809,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        },
+        "beat_run": {
+          "n": 86,
+          "accuracy": 0.05813953488372093,
+          "macro_f1": 0.10989010989010987,
+          "macro_recall": 0.05813953488372093,
+          "per_class": {
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.05813953488372093,
+              "f1": 0.10989010989010987,
+              "support": 86,
+              "subjects": 1
+            }
+          }
+        },
+        "rate_derived": {
+          "n": 488,
+          "accuracy": 0.39344262295081966,
+          "macro_f1": 0.6226379827504873,
+          "macro_recall": 0.549587438916927,
+          "per_class": {
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.1608187134502924,
+              "f1": 0.2770780856423174,
+              "support": 342,
+              "subjects": 7
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9383561643835616,
+              "f1": 0.9681978798586572,
+              "support": 146,
+              "subjects": 6
+            }
+          }
+        },
+        "record_level": {
+          "n": 1233,
+          "accuracy": 0.9213300892133008,
+          "macro_f1": 0.8182738641990944,
+          "macro_recall": 0.8075419371399685,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.9686411149825784,
+              "f1": 0.9591719378953422,
+              "support": 861,
+              "subjects": 789
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.3888888888888889,
+              "f1": 0.5060240963855421,
+              "support": 54,
+              "subjects": 52
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9347826086956522,
+              "f1": 0.8958333333333334,
+              "support": 46,
+              "subjects": 44
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.9017857142857143,
+              "f1": 0.9308755760368663,
+              "support": 112,
+              "subjects": 96
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.6666666666666666,
+              "f1": 0.8,
+              "support": 3,
+              "subjects": 3
+            },
+            "PAC": {
+              "recall": 0.76,
+              "f1": 0.6031746031746031,
+              "support": 25,
+              "subjects": 25
+            },
+            "PVC": {
+              "recall": 0.98,
+              "f1": 0.9158878504672898,
+              "support": 50,
+              "subjects": 50
+            },
+            "LBBB": {
+              "recall": 0.9032258064516129,
+              "f1": 0.9333333333333333,
+              "support": 31,
+              "subjects": 25
+            },
+            "RBBB": {
+              "recall": 0.9047619047619048,
+              "f1": 0.8837209302325582,
+              "support": 21,
+              "subjects": 19
+            },
+            "AV_BLOCK_1": {
+              "recall": 0.6666666666666666,
+              "f1": 0.7547169811320754,
+              "support": 30,
+              "subjects": 28
+            }
+          }
+        },
+        "rhythm_annotation": {
+          "n": 476,
+          "accuracy": 0.6407563025210085,
+          "macro_f1": 0.49860537311059994,
+          "macro_recall": 0.4829528535980149,
+          "per_class": {
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.7225806451612903,
+              "f1": 0.7832167832167832,
+              "support": 310,
+              "subjects": 7
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.0,
+              "f1": 0.0,
+              "support": 50,
+              "subjects": 1
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.44,
+              "f1": 0.3728813559322034,
+              "support": 25,
+              "subjects": 6
+            },
+            "VENTRICULAR_FIBRILLATION": {
+              "recall": 0.7692307692307693,
+              "f1": 0.8383233532934132,
+              "support": 91,
+              "subjects": 6
+            }
+          }
+        }
+      },
+      "by_real_lead_mask": {
+        "0100000": {
+          "n": 364,
+          "accuracy": 0.6181318681318682,
+          "macro_f1": 0.498078055391999,
+          "macro_recall": 0.5391941391941392,
+          "per_class": {
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.6952380952380952,
+              "f1": 0.7448979591836735,
+              "support": 210,
+              "subjects": 5
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.0,
+              "f1": 0.0,
+              "support": 50,
+              "subjects": 1
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.6923076923076923,
+              "f1": 0.4090909090909091,
+              "support": 13,
+              "subjects": 2
+            },
+            "VENTRICULAR_FIBRILLATION": {
+              "recall": 0.7692307692307693,
+              "f1": 0.8383233532934132,
+              "support": 91,
+              "subjects": 6
+            }
+          }
+        },
+        "0100001": {
+          "n": 937,
+          "accuracy": 0.7193169690501601,
+          "macro_f1": 0.6565594684221008,
+          "macro_recall": 0.6616298910483162,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.88,
+              "f1": 0.735376044568245,
+              "support": 300,
+              "subjects": 6
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.020689655172413793,
+              "f1": 0.040540540540540536,
+              "support": 145,
+              "subjects": 4
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 1.0,
+              "f1": 0.7407407407407407,
+              "support": 10,
+              "subjects": 2
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.78,
+              "f1": 0.8387096774193548,
+              "support": 100,
+              "subjects": 2
+            },
+            "PAC": {
+              "recall": 0.5522388059701493,
+              "f1": 0.6788990825688074,
+              "support": 67,
+              "subjects": 5
+            },
+            "PVC": {
+              "recall": 0.9950738916256158,
+              "f1": 0.8840262582056894,
+              "support": 203,
+              "subjects": 6
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.16666666666666666,
+              "f1": 0.26666666666666666,
+              "support": 12,
+              "subjects": 4
+            },
+            "LBBB": {
+              "recall": 0.58,
+              "f1": 0.7341772151898733,
+              "support": 50,
+              "subjects": 1
+            },
+            "RBBB": {
+              "recall": 0.98,
+              "f1": 0.98989898989899,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        },
+        "1111111": {
+          "n": 2745,
+          "accuracy": 0.8229508196721311,
+          "macro_f1": 0.6796674761431635,
+          "macro_recall": 0.7092086697556399,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.9067475360121304,
+              "f1": 0.8807069219440354,
+              "support": 1319,
+              "subjects": 794
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.2908366533864542,
+              "f1": 0.43712574850299407,
+              "support": 251,
+              "subjects": 55
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9340659340659341,
+              "f1": 0.913978494623656,
+              "support": 182,
+              "subjects": 48
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.9017857142857143,
+              "f1": 0.8938053097345132,
+              "support": 112,
+              "subjects": 96
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.6666666666666666,
+              "f1": 0.8,
+              "support": 3,
+              "subjects": 3
+            },
+            "PAC": {
+              "recall": 0.6266666666666667,
+              "f1": 0.5696969696969697,
+              "support": 75,
+              "subjects": 29
+            },
+            "PVC": {
+              "recall": 0.9417322834645669,
+              "f1": 0.8952095808383234,
+              "support": 635,
+              "subjects": 55
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.05813953488372093,
+              "f1": 0.10989010989010987,
+              "support": 86,
+              "subjects": 1
+            },
+            "LBBB": {
+              "recall": 0.9032258064516129,
+              "f1": 0.9333333333333333,
+              "support": 31,
+              "subjects": 25
+            },
+            "RBBB": {
+              "recall": 0.9047619047619048,
+              "f1": 0.2878787878787879,
+              "support": 21,
+              "subjects": 19
+            },
+            "AV_BLOCK_1": {
+              "recall": 0.6666666666666666,
+              "f1": 0.7547169811320754,
+              "support": 30,
+              "subjects": 28
+            }
+          }
+        }
+      }
+    },
+    "leadconv_0100001": {
+      "overall": {
+        "n": 2745,
+        "accuracy": 0.8029143897996357,
+        "macro": {
+          "precision": 0.7795701700573126,
+          "recall": 0.6756771480477901,
+          "specificity": 0.9738675779664707,
+          "f1": 0.6551489217646682,
+          "auroc": 0.9612440490945865,
+          "accuracy": 0.8029143897996357
+        },
+        "per_class": {
+          "NORMAL_SINUS": {
+            "precision": 0.8391608391608392,
+            "recall": 0.9097801364670205,
+            "specificity": 0.8387096774193549,
+            "f1": 0.8730447435431067,
+            "support": 1319,
+            "subjects": 794,
+            "auroc": 0.9238792829367312
+          },
+          "SINUS_BRADYCARDIA": {
+            "precision": 0.8625,
+            "recall": 0.2749003984063745,
+            "specificity": 0.995589414595028,
+            "f1": 0.4169184290030212,
+            "support": 251,
+            "subjects": 55,
+            "auroc": 0.9645555708201676
+          },
+          "SINUS_TACHYCARDIA": {
+            "precision": 0.8826530612244898,
+            "recall": 0.9505494505494505,
+            "specificity": 0.9910261412407335,
+            "f1": 0.9153439153439152,
+            "support": 182,
+            "subjects": 48,
+            "auroc": 0.9949599756466709
+          },
+          "ATRIAL_FIBRILLATION": {
+            "precision": 0.825,
+            "recall": 0.8839285714285714,
+            "specificity": 0.9920243068742879,
+            "f1": 0.8534482758620688,
+            "support": 112,
+            "subjects": 96,
+            "auroc": 0.9777853887472193
+          },
+          "ATRIAL_FLUTTER": {
+            "precision": 1.0,
+            "recall": 0.6666666666666666,
+            "specificity": 1.0,
+            "f1": 0.8,
+            "support": 3,
+            "subjects": 3,
+            "auroc": 1.0
+          },
+          "PAC": {
+            "precision": 0.4659090909090909,
+            "recall": 0.5466666666666666,
+            "specificity": 0.9823970037453184,
+            "f1": 0.5030674846625767,
+            "support": 75,
+            "subjects": 29,
+            "auroc": 0.8354956304619225
+          },
+          "PVC": {
+            "precision": 0.8489984591679507,
+            "recall": 0.8677165354330708,
+            "specificity": 0.9535545023696682,
+            "f1": 0.8582554517133956,
+            "support": 635,
+            "subjects": 55,
+            "auroc": 0.9429242079337239
+          },
+          "VENTRICULAR_TACHYCARDIA": {
+            "precision": 1.0,
+            "recall": 0.08139534883720931,
+            "specificity": 1.0,
+            "f1": 0.15053763440860218,
+            "support": 86,
+            "subjects": 1,
+            "auroc": 0.9828139622344473
+          },
+          "VENTRICULAR_FIBRILLATION": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "specificity": 1.0,
+            "f1": 0.0,
+            "support": 0,
+            "subjects": 0,
+            "auroc": null
+          },
+          "LBBB": {
+            "precision": 0.9333333333333333,
+            "recall": 0.9032258064516129,
+            "specificity": 0.9992630803242447,
+            "f1": 0.9180327868852459,
+            "support": 31,
+            "subjects": 25,
+            "auroc": 0.9919295409703568
+          },
+          "RBBB": {
+            "precision": 0.12605042016806722,
+            "recall": 0.7142857142857143,
+            "specificity": 0.9618208516886931,
+            "f1": 0.2142857142857143,
+            "support": 21,
+            "subjects": 19,
+            "auroc": 0.9638836445003846
+          },
+          "AV_BLOCK_1": {
+            "precision": 0.7916666666666666,
+            "recall": 0.6333333333333333,
+            "specificity": 0.998158379373849,
+            "f1": 0.7037037037037038,
+            "support": 30,
+            "subjects": 28,
+            "auroc": 0.9954573357888274
+          }
+        },
+        "present_classes": [
+          "NORMAL_SINUS",
+          "SINUS_BRADYCARDIA",
+          "SINUS_TACHYCARDIA",
+          "ATRIAL_FIBRILLATION",
+          "ATRIAL_FLUTTER",
+          "PAC",
+          "PVC",
+          "VENTRICULAR_TACHYCARDIA",
+          "LBBB",
+          "RBBB",
+          "AV_BLOCK_1"
+        ],
+        "absent_classes": [
+          "VENTRICULAR_FIBRILLATION"
+        ],
+        "predicted_outside_head": 0,
+        "confusion_matrix": [
+          [
+            1200,
+            10,
+            3,
+            1,
+            0,
+            31,
+            9,
+            0,
+            0,
+            0,
+            63,
+            2
+          ],
+          [
+            177,
+            69,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            2,
+            0
+          ],
+          [
+            4,
+            0,
+            173,
+            1,
+            0,
+            1,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            5,
+            0,
+            2,
+            99,
+            0,
+            1,
+            3,
+            0,
+            0,
+            0,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            0,
+            1,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            10,
+            0,
+            5,
+            2,
+            0,
+            41,
+            2,
+            0,
+            0,
+            0,
+            15,
+            0
+          ],
+          [
+            26,
+            1,
+            11,
+            12,
+            0,
+            11,
+            551,
+            0,
+            0,
+            0,
+            23,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            79,
+            7,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            28,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            2,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            15,
+            1
+          ],
+          [
+            7,
+            0,
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            19
+          ]
+        ],
+        "macro_f1_ci95": [
+          0.5949515316364262,
+          0.7795825471209991
+        ]
+      },
+      "low_subject_classes": [
+        "ATRIAL_FLUTTER",
+        "VENTRICULAR_TACHYCARDIA"
+      ],
+      "by_dataset": {
+        "incart": {
+          "n": 1512,
+          "accuracy": 0.7103174603174603,
+          "macro_f1": 0.578423352206231,
+          "macro_recall": 0.5661151528251158,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.8013100436681223,
+              "f1": 0.7252964426877471,
+              "support": 458,
+              "subjects": 5
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.2182741116751269,
+              "f1": 0.35390946502057613,
+              "support": 197,
+              "subjects": 3
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9558823529411765,
+              "f1": 0.9154929577464789,
+              "support": 136,
+              "subjects": 4
+            },
+            "PAC": {
+              "recall": 0.48,
+              "f1": 0.47058823529411764,
+              "support": 50,
+              "subjects": 4
+            },
+            "PVC": {
+              "recall": 0.8598290598290599,
+              "f1": 0.8547153780798641,
+              "support": 585,
+              "subjects": 5
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.08139534883720931,
+              "f1": 0.15053763440860218,
+              "support": 86,
+              "subjects": 1
+            }
+          }
+        },
+        "ptbxl": {
+          "n": 1233,
+          "accuracy": 0.916463909164639,
+          "macro_f1": 0.8010468206649503,
+          "macro_recall": 0.782518385713978,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.967479674796748,
+              "f1": 0.9591249280368451,
+              "support": 861,
+              "subjects": 789
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.48148148148148145,
+              "f1": 0.5909090909090909,
+              "support": 54,
+              "subjects": 52
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9347826086956522,
+              "f1": 0.9148936170212766,
+              "support": 46,
+              "subjects": 44
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.8839285714285714,
+              "f1": 0.8999999999999999,
+              "support": 112,
+              "subjects": 96
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.6666666666666666,
+              "f1": 0.8,
+              "support": 3,
+              "subjects": 3
+            },
+            "PAC": {
+              "recall": 0.68,
+              "f1": 0.5573770491803278,
+              "support": 25,
+              "subjects": 25
+            },
+            "PVC": {
+              "recall": 0.96,
+              "f1": 0.8971962616822429,
+              "support": 50,
+              "subjects": 50
+            },
+            "LBBB": {
+              "recall": 0.9032258064516129,
+              "f1": 0.9180327868852459,
+              "support": 31,
+              "subjects": 25
+            },
+            "RBBB": {
+              "recall": 0.7142857142857143,
+              "f1": 0.7692307692307692,
+              "support": 21,
+              "subjects": 19
+            },
+            "AV_BLOCK_1": {
+              "recall": 0.6333333333333333,
+              "f1": 0.7037037037037038,
+              "support": 30,
+              "subjects": 28
+            }
+          }
+        }
+      },
+      "by_label_method": {
+        "beat_morphology": {
+          "n": 1093,
+          "accuracy": 0.817932296431839,
+          "macro_f1": 0.749263076215025,
+          "macro_recall": 0.7137130344990608,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.8013100436681223,
+              "f1": 0.8584795321637427,
+              "support": 458,
+              "subjects": 5
+            },
+            "PAC": {
+              "recall": 0.48,
+              "f1": 0.47058823529411764,
+              "support": 50,
+              "subjects": 4
+            },
+            "PVC": {
+              "recall": 0.8598290598290599,
+              "f1": 0.9187214611872146,
+              "support": 585,
+              "subjects": 5
+            }
+          }
+        },
+        "beat_run": {
+          "n": 86,
+          "accuracy": 0.08139534883720931,
+          "macro_f1": 0.15053763440860218,
+          "macro_recall": 0.08139534883720931,
+          "per_class": {
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.08139534883720931,
+              "f1": 0.15053763440860218,
+              "support": 86,
+              "subjects": 1
+            }
+          }
+        },
+        "rate_derived": {
+          "n": 333,
+          "accuracy": 0.5195195195195195,
+          "macro_f1": 0.6678884711779448,
+          "macro_recall": 0.5870782323081517,
+          "per_class": {
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.2182741116751269,
+              "f1": 0.3583333333333333,
+              "support": 197,
+              "subjects": 3
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9558823529411765,
+              "f1": 0.9774436090225563,
+              "support": 136,
+              "subjects": 4
+            }
+          }
+        },
+        "record_level": {
+          "n": 1233,
+          "accuracy": 0.916463909164639,
+          "macro_f1": 0.8010468206649503,
+          "macro_recall": 0.782518385713978,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.967479674796748,
+              "f1": 0.9591249280368451,
+              "support": 861,
+              "subjects": 789
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.48148148148148145,
+              "f1": 0.5909090909090909,
+              "support": 54,
+              "subjects": 52
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9347826086956522,
+              "f1": 0.9148936170212766,
+              "support": 46,
+              "subjects": 44
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.8839285714285714,
+              "f1": 0.8999999999999999,
+              "support": 112,
+              "subjects": 96
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.6666666666666666,
+              "f1": 0.8,
+              "support": 3,
+              "subjects": 3
+            },
+            "PAC": {
+              "recall": 0.68,
+              "f1": 0.5573770491803278,
+              "support": 25,
+              "subjects": 25
+            },
+            "PVC": {
+              "recall": 0.96,
+              "f1": 0.8971962616822429,
+              "support": 50,
+              "subjects": 50
+            },
+            "LBBB": {
+              "recall": 0.9032258064516129,
+              "f1": 0.9180327868852459,
+              "support": 31,
+              "subjects": 25
+            },
+            "RBBB": {
+              "recall": 0.7142857142857143,
+              "f1": 0.7692307692307692,
+              "support": 21,
+              "subjects": 19
+            },
+            "AV_BLOCK_1": {
+              "recall": 0.6333333333333333,
+              "f1": 0.7037037037037038,
+              "support": 30,
+              "subjects": 28
+            }
+          }
+        }
+      },
+      "by_real_lead_mask": {
+        "1111111": {
+          "n": 2745,
+          "accuracy": 0.8029143897996357,
+          "macro_f1": 0.6551489217646682,
+          "macro_recall": 0.6756771480477901,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.9097801364670205,
+              "f1": 0.8730447435431067,
+              "support": 1319,
+              "subjects": 794
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.2749003984063745,
+              "f1": 0.4169184290030212,
+              "support": 251,
+              "subjects": 55
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9505494505494505,
+              "f1": 0.9153439153439152,
+              "support": 182,
+              "subjects": 48
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.8839285714285714,
+              "f1": 0.8534482758620688,
+              "support": 112,
+              "subjects": 96
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.6666666666666666,
+              "f1": 0.8,
+              "support": 3,
+              "subjects": 3
+            },
+            "PAC": {
+              "recall": 0.5466666666666666,
+              "f1": 0.5030674846625767,
+              "support": 75,
+              "subjects": 29
+            },
+            "PVC": {
+              "recall": 0.8677165354330708,
+              "f1": 0.8582554517133956,
+              "support": 635,
+              "subjects": 55
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.08139534883720931,
+              "f1": 0.15053763440860218,
+              "support": 86,
+              "subjects": 1
+            },
+            "LBBB": {
+              "recall": 0.9032258064516129,
+              "f1": 0.9180327868852459,
+              "support": 31,
+              "subjects": 25
+            },
+            "RBBB": {
+              "recall": 0.7142857142857143,
+              "f1": 0.2142857142857143,
+              "support": 21,
+              "subjects": 19
+            },
+            "AV_BLOCK_1": {
+              "recall": 0.6333333333333333,
+              "f1": 0.7037037037037038,
+              "support": 30,
+              "subjects": 28
+            }
+          }
+        }
+      }
+    },
+    "leadconv_0100000": {
+      "overall": {
+        "n": 3682,
+        "accuracy": 0.7645301466594242,
+        "macro": {
+          "precision": 0.6755483676870475,
+          "recall": 0.6322189700495755,
+          "specificity": 0.969249568625068,
+          "f1": 0.597439711714298,
+          "auroc": 0.9546357661296256,
+          "accuracy": 0.7645301466594242
+        },
+        "per_class": {
+          "NORMAL_SINUS": {
+            "precision": 0.7817014446227929,
+            "recall": 0.9024088943792464,
+            "specificity": 0.8022297624818225,
+            "f1": 0.837729357798165,
+            "support": 1619,
+            "subjects": 800,
+            "auroc": 0.9184044177285189
+          },
+          "SINUS_BRADYCARDIA": {
+            "precision": 0.8536585365853658,
+            "recall": 0.17676767676767677,
+            "specificity": 0.9963481436396835,
+            "f1": 0.2928870292887029,
+            "support": 396,
+            "subjects": 59,
+            "auroc": 0.9623640544212668
+          },
+          "SINUS_TACHYCARDIA": {
+            "precision": 0.86,
+            "recall": 0.8958333333333334,
+            "specificity": 0.9919770773638968,
+            "f1": 0.8775510204081632,
+            "support": 192,
+            "subjects": 50,
+            "auroc": 0.9952468361986628
+          },
+          "ATRIAL_FIBRILLATION": {
+            "precision": 0.8181818181818182,
+            "recall": 0.8066037735849056,
+            "specificity": 0.9890489913544669,
+            "f1": 0.8123515439429929,
+            "support": 212,
+            "subjects": 98,
+            "auroc": 0.9852930781360448
+          },
+          "ATRIAL_FLUTTER": {
+            "precision": 0.6666666666666666,
+            "recall": 0.6666666666666666,
+            "specificity": 0.9997281870073389,
+            "f1": 0.6666666666666666,
+            "support": 3,
+            "subjects": 3,
+            "auroc": 0.9997281870073389
+          },
+          "PAC": {
+            "precision": 0.5538461538461539,
+            "recall": 0.5070422535211268,
+            "specificity": 0.9836158192090395,
+            "f1": 0.5294117647058824,
+            "support": 142,
+            "subjects": 34,
+            "auroc": 0.8413006286305403
+          },
+          "PVC": {
+            "precision": 0.8180803571428571,
+            "recall": 0.8747016706443914,
+            "specificity": 0.9426863572433193,
+            "f1": 0.845444059976932,
+            "support": 838,
+            "subjects": 61,
+            "auroc": 0.9392629125001258
+          },
+          "VENTRICULAR_TACHYCARDIA": {
+            "precision": 0.5714285714285714,
+            "recall": 0.04081632653061224,
+            "specificity": 0.9991629464285714,
+            "f1": 0.07619047619047617,
+            "support": 98,
+            "subjects": 5,
+            "auroc": 0.9690233236151603
+          },
+          "VENTRICULAR_FIBRILLATION": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "specificity": 1.0,
+            "f1": 0.0,
+            "support": 0,
+            "subjects": 0,
+            "auroc": null
+          },
+          "LBBB": {
+            "precision": 0.8709677419354839,
+            "recall": 0.6666666666666666,
+            "specificity": 0.9977783948903083,
+            "f1": 0.7552447552447552,
+            "support": 81,
+            "subjects": 26,
+            "auroc": 0.9457695221834813
+          },
+          "RBBB": {
+            "precision": 0.3717948717948718,
+            "recall": 0.8169014084507042,
+            "specificity": 0.9728607034062586,
+            "f1": 0.5110132158590309,
+            "support": 71,
+            "subjects": 20,
+            "auroc": 0.9604182837261731
+          },
+          "AV_BLOCK_1": {
+            "precision": 0.2647058823529412,
+            "recall": 0.6,
+            "specificity": 0.9863088718510405,
+            "f1": 0.36734693877551017,
+            "support": 30,
+            "subjects": 28,
+            "auroc": 0.9841821832785688
+          }
+        },
+        "present_classes": [
+          "NORMAL_SINUS",
+          "SINUS_BRADYCARDIA",
+          "SINUS_TACHYCARDIA",
+          "ATRIAL_FIBRILLATION",
+          "ATRIAL_FLUTTER",
+          "PAC",
+          "PVC",
+          "VENTRICULAR_TACHYCARDIA",
+          "LBBB",
+          "RBBB",
+          "AV_BLOCK_1"
+        ],
+        "absent_classes": [
+          "VENTRICULAR_FIBRILLATION"
+        ],
+        "predicted_outside_head": 0,
+        "confusion_matrix": [
+          [
+            1461,
+            10,
+            4,
+            1,
+            0,
+            33,
+            21,
+            0,
+            0,
+            0,
+            64,
+            25
+          ],
+          [
+            318,
+            70,
+            0,
+            1,
+            0,
+            2,
+            1,
+            0,
+            0,
+            1,
+            3,
+            0
+          ],
+          [
+            9,
+            0,
+            172,
+            0,
+            0,
+            4,
+            7,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            5,
+            1,
+            1,
+            171,
+            1,
+            2,
+            28,
+            2,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            1,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            30,
+            0,
+            11,
+            1,
+            0,
+            72,
+            11,
+            0,
+            0,
+            0,
+            17,
+            0
+          ],
+          [
+            35,
+            1,
+            11,
+            24,
+            0,
+            15,
+            733,
+            1,
+            0,
+            6,
+            10,
+            2
+          ],
+          [
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            92,
+            4,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            54,
+            3,
+            22
+          ],
+          [
+            4,
+            0,
+            1,
+            4,
+            0,
+            1,
+            2,
+            0,
+            0,
+            1,
+            58,
+            0
+          ],
+          [
+            6,
+            0,
+            0,
+            3,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            18
+          ]
+        ],
+        "macro_f1_ci95": [
+          0.5069981319002347,
+          0.686437316609457
+        ]
+      },
+      "low_subject_classes": [
+        "ATRIAL_FLUTTER"
+      ],
+      "by_dataset": {
+        "incart": {
+          "n": 1512,
+          "accuracy": 0.6937830687830688,
+          "macro_f1": 0.5489249369752621,
+          "macro_recall": 0.5427838462586493,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.7947598253275109,
+              "f1": 0.7172413793103448,
+              "support": 458,
+              "subjects": 5
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.20812182741116753,
+              "f1": 0.34024896265560167,
+              "support": 197,
+              "subjects": 3
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9044117647058824,
+              "f1": 0.8913043478260869,
+              "support": 136,
+              "subjects": 4
+            },
+            "PAC": {
+              "recall": 0.48,
+              "f1": 0.4615384615384615,
+              "support": 50,
+              "subjects": 4
+            },
+            "PVC": {
+              "recall": 0.8461538461538461,
+              "f1": 0.838272650296359,
+              "support": 585,
+              "subjects": 5
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.023255813953488372,
+              "f1": 0.0449438202247191,
+              "support": 86,
+              "subjects": 1
+            }
+          }
+        },
+        "mitbih": {
+          "n": 937,
+          "accuracy": 0.6926360725720384,
+          "macro_f1": 0.6193878669471965,
+          "macro_recall": 0.6098843494623216,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.89,
+              "f1": 0.7225981055480378,
+              "support": 300,
+              "subjects": 6
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.013793103448275862,
+              "f1": 0.027210884353741496,
+              "support": 145,
+              "subjects": 4
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.8,
+              "f1": 0.64,
+              "support": 10,
+              "subjects": 2
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.73,
+              "f1": 0.8295454545454545,
+              "support": 100,
+              "subjects": 2
+            },
+            "PAC": {
+              "recall": 0.4626865671641791,
+              "f1": 0.5961538461538461,
+              "support": 67,
+              "subjects": 5
+            },
+            "PVC": {
+              "recall": 0.9458128078817734,
+              "f1": 0.8648648648648648,
+              "support": 203,
+              "subjects": 6
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.16666666666666666,
+              "f1": 0.26666666666666666,
+              "support": 12,
+              "subjects": 4
+            },
+            "LBBB": {
+              "recall": 0.5,
+              "f1": 0.6666666666666666,
+              "support": 50,
+              "subjects": 1
+            },
+            "RBBB": {
+              "recall": 0.98,
+              "f1": 0.9607843137254902,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        },
+        "ptbxl": {
+          "n": 1233,
+          "accuracy": 0.9059205190592052,
+          "macro_f1": 0.7534952076137084,
+          "macro_recall": 0.7461021668271182,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.9639953542392566,
+              "f1": 0.9573241061130334,
+              "support": 861,
+              "subjects": 789
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.5,
+              "f1": 0.6,
+              "support": 54,
+              "subjects": 52
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.8913043478260869,
+              "f1": 0.9010989010989011,
+              "support": 46,
+              "subjects": 44
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.875,
+              "f1": 0.8789237668161436,
+              "support": 112,
+              "subjects": 96
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.6666666666666666,
+              "f1": 0.6666666666666666,
+              "support": 3,
+              "subjects": 3
+            },
+            "PAC": {
+              "recall": 0.68,
+              "f1": 0.53125,
+              "support": 25,
+              "subjects": 25
+            },
+            "PVC": {
+              "recall": 0.92,
+              "f1": 0.8440366972477064,
+              "support": 50,
+              "subjects": 50
+            },
+            "LBBB": {
+              "recall": 0.9354838709677419,
+              "f1": 0.9354838709677419,
+              "support": 31,
+              "subjects": 25
+            },
+            "RBBB": {
+              "recall": 0.42857142857142855,
+              "f1": 0.5142857142857143,
+              "support": 21,
+              "subjects": 19
+            },
+            "AV_BLOCK_1": {
+              "recall": 0.6,
+              "f1": 0.7058823529411764,
+              "support": 30,
+              "subjects": 28
+            }
+          }
+        }
+      },
+      "by_label_method": {
+        "beat_morphology": {
+          "n": 1763,
+          "accuracy": 0.8207600680657969,
+          "macro_f1": 0.6901242405903918,
+          "macro_recall": 0.7308733414221005,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.8324538258575198,
+              "f1": 0.8709454796411318,
+              "support": 758,
+              "subjects": 11
+            },
+            "PAC": {
+              "recall": 0.4700854700854701,
+              "f1": 0.5365853658536585,
+              "support": 117,
+              "subjects": 9
+            },
+            "PVC": {
+              "recall": 0.8718274111675127,
+              "f1": 0.9153897401732178,
+              "support": 788,
+              "subjects": 11
+            },
+            "LBBB": {
+              "recall": 0.5,
+              "f1": 0.6172839506172839,
+              "support": 50,
+              "subjects": 1
+            },
+            "RBBB": {
+              "recall": 0.98,
+              "f1": 0.5104166666666666,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        },
+        "beat_run": {
+          "n": 86,
+          "accuracy": 0.023255813953488372,
+          "macro_f1": 0.04545454545454545,
+          "macro_recall": 0.023255813953488372,
+          "per_class": {
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.023255813953488372,
+              "f1": 0.04545454545454545,
+              "support": 86,
+              "subjects": 1
+            }
+          }
+        },
+        "rate_derived": {
+          "n": 488,
+          "accuracy": 0.35655737704918034,
+          "macro_f1": 0.5846124994139434,
+          "macro_recall": 0.5114956340623248,
+          "per_class": {
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.12573099415204678,
+              "f1": 0.22337662337662337,
+              "support": 342,
+              "subjects": 7
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.8972602739726028,
+              "f1": 0.9458483754512635,
+              "support": 146,
+              "subjects": 6
+            }
+          }
+        },
+        "record_level": {
+          "n": 1233,
+          "accuracy": 0.9059205190592052,
+          "macro_f1": 0.7534952076137084,
+          "macro_recall": 0.7461021668271182,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.9639953542392566,
+              "f1": 0.9573241061130334,
+              "support": 861,
+              "subjects": 789
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.5,
+              "f1": 0.6,
+              "support": 54,
+              "subjects": 52
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.8913043478260869,
+              "f1": 0.9010989010989011,
+              "support": 46,
+              "subjects": 44
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.875,
+              "f1": 0.8789237668161436,
+              "support": 112,
+              "subjects": 96
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.6666666666666666,
+              "f1": 0.6666666666666666,
+              "support": 3,
+              "subjects": 3
+            },
+            "PAC": {
+              "recall": 0.68,
+              "f1": 0.53125,
+              "support": 25,
+              "subjects": 25
+            },
+            "PVC": {
+              "recall": 0.92,
+              "f1": 0.8440366972477064,
+              "support": 50,
+              "subjects": 50
+            },
+            "LBBB": {
+              "recall": 0.9354838709677419,
+              "f1": 0.9354838709677419,
+              "support": 31,
+              "subjects": 25
+            },
+            "RBBB": {
+              "recall": 0.42857142857142855,
+              "f1": 0.5142857142857143,
+              "support": 21,
+              "subjects": 19
+            },
+            "AV_BLOCK_1": {
+              "recall": 0.6,
+              "f1": 0.7058823529411764,
+              "support": 30,
+              "subjects": 28
+            }
+          }
+        },
+        "rhythm_annotation": {
+          "n": 112,
+          "accuracy": 0.6696428571428571,
+          "macro_f1": 0.5504761904761905,
+          "macro_recall": 0.4483333333333333,
+          "per_class": {
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.73,
+              "f1": 0.8342857142857143,
+              "support": 100,
+              "subjects": 2
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.16666666666666666,
+              "f1": 0.26666666666666666,
+              "support": 12,
+              "subjects": 4
+            }
+          }
+        }
+      },
+      "by_real_lead_mask": {
+        "0100001": {
+          "n": 937,
+          "accuracy": 0.6926360725720384,
+          "macro_f1": 0.6193878669471965,
+          "macro_recall": 0.6098843494623216,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.89,
+              "f1": 0.7225981055480378,
+              "support": 300,
+              "subjects": 6
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.013793103448275862,
+              "f1": 0.027210884353741496,
+              "support": 145,
+              "subjects": 4
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.8,
+              "f1": 0.64,
+              "support": 10,
+              "subjects": 2
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.73,
+              "f1": 0.8295454545454545,
+              "support": 100,
+              "subjects": 2
+            },
+            "PAC": {
+              "recall": 0.4626865671641791,
+              "f1": 0.5961538461538461,
+              "support": 67,
+              "subjects": 5
+            },
+            "PVC": {
+              "recall": 0.9458128078817734,
+              "f1": 0.8648648648648648,
+              "support": 203,
+              "subjects": 6
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.16666666666666666,
+              "f1": 0.26666666666666666,
+              "support": 12,
+              "subjects": 4
+            },
+            "LBBB": {
+              "recall": 0.5,
+              "f1": 0.6666666666666666,
+              "support": 50,
+              "subjects": 1
+            },
+            "RBBB": {
+              "recall": 0.98,
+              "f1": 0.9607843137254902,
+              "support": 50,
+              "subjects": 1
+            }
+          }
+        },
+        "1111111": {
+          "n": 2745,
+          "accuracy": 0.7890710382513662,
+          "macro_f1": 0.6103707446657952,
+          "macro_recall": 0.6368054020279946,
+          "per_class": {
+            "NORMAL_SINUS": {
+              "recall": 0.9052312357846853,
+              "f1": 0.8686795198253909,
+              "support": 1319,
+              "subjects": 794
+            },
+            "SINUS_BRADYCARDIA": {
+              "recall": 0.27091633466135456,
+              "f1": 0.4108761329305136,
+              "support": 251,
+              "subjects": 55
+            },
+            "SINUS_TACHYCARDIA": {
+              "recall": 0.9010989010989011,
+              "f1": 0.8937329700272478,
+              "support": 182,
+              "subjects": 48
+            },
+            "ATRIAL_FIBRILLATION": {
+              "recall": 0.875,
+              "f1": 0.7999999999999999,
+              "support": 112,
+              "subjects": 96
+            },
+            "ATRIAL_FLUTTER": {
+              "recall": 0.6666666666666666,
+              "f1": 0.6666666666666666,
+              "support": 3,
+              "subjects": 3
+            },
+            "PAC": {
+              "recall": 0.5466666666666666,
+              "f1": 0.4880952380952381,
+              "support": 75,
+              "subjects": 29
+            },
+            "PVC": {
+              "recall": 0.8519685039370078,
+              "f1": 0.8387596899224805,
+              "support": 635,
+              "subjects": 55
+            },
+            "VENTRICULAR_TACHYCARDIA": {
+              "recall": 0.023255813953488372,
+              "f1": 0.04444444444444444,
+              "support": 86,
+              "subjects": 1
+            },
+            "LBBB": {
+              "recall": 0.9354838709677419,
+              "f1": 0.8529411764705881,
+              "support": 31,
+              "subjects": 25
+            },
+            "RBBB": {
+              "recall": 0.42857142857142855,
+              "f1": 0.14400000000000002,
+              "support": 21,
+              "subjects": 19
+            },
+            "AV_BLOCK_1": {
+              "recall": 0.6,
+              "f1": 0.7058823529411764,
+              "support": 30,
+              "subjects": 28
+            }
+          }
+        }
+      }
+    }
+  },
+  "checkpoints": [
+    "models/experiments/v1_f_leadfab05/best_model.pt"
+  ],
+  "baseline_mode": false,
+  "filter_preset": "default",
+  "fabricated_leads": "keep",
+  "logit_bias": [
+    1.0,
+    0.0,
+    -0.5999999999999999,
+    0.0,
+    0.0,
+    0.8000000000000003,
+    1.2000000000000002,
+    0.20000000000000018,
+    0.0,
+    -0.5999999999999999,
+    -0.19999999999999996,
+    -0.3999999999999999
+  ],
+  "lead_conversion": {
+    "0100001": {
+      "events": 2745,
+      "flip_rate": 0.029143897996357013,
+      "native": {
+        "n": 2745,
+        "accuracy": 0.8105646630236795,
+        "macro_f1": 0.6730007531163469,
+        "macro_recall": 0.7003553253581306,
+        "per_class": {
+          "NORMAL_SINUS": {
+            "recall": 0.9097801364670205,
+            "f1": 0.8711433756805806,
+            "support": 1319
+          },
+          "SINUS_BRADYCARDIA": {
+            "recall": 0.2589641434262948,
+            "f1": 0.3975535168195718,
+            "support": 251
+          },
+          "SINUS_TACHYCARDIA": {
+            "recall": 0.9395604395604396,
+            "f1": 0.9023746701846965,
+            "support": 182
+          },
+          "ATRIAL_FIBRILLATION": {
+            "recall": 0.9017857142857143,
+            "f1": 0.905829596412556,
+            "support": 112
+          },
+          "ATRIAL_FLUTTER": {
+            "recall": 0.6666666666666666,
+            "f1": 0.8,
+            "support": 3
+          },
+          "PAC": {
+            "recall": 0.5866666666666667,
+            "f1": 0.5499999999999999,
+            "support": 75
+          },
+          "PVC": {
+            "recall": 0.8960629921259843,
+            "f1": 0.8740399385560675,
+            "support": 635
+          },
+          "VENTRICULAR_TACHYCARDIA": {
+            "recall": 0.06976744186046512,
+            "f1": 0.13043478260869565,
+            "support": 86
+          },
+          "LBBB": {
+            "recall": 0.9032258064516129,
+            "f1": 0.9333333333333333,
+            "support": 31
+          },
+          "RBBB": {
+            "recall": 0.9047619047619048,
+            "f1": 0.28358208955223885,
+            "support": 21
+          },
+          "AV_BLOCK_1": {
+            "recall": 0.6666666666666666,
+            "f1": 0.7547169811320754,
+            "support": 30
+          }
+        }
+      },
+      "converted": {
+        "n": 2745,
+        "accuracy": 0.8029143897996357,
+        "macro_f1": 0.6551489217646682,
+        "macro_recall": 0.6756771480477901,
+        "per_class": {
+          "NORMAL_SINUS": {
+            "recall": 0.9097801364670205,
+            "f1": 0.8730447435431067,
+            "support": 1319
+          },
+          "SINUS_BRADYCARDIA": {
+            "recall": 0.2749003984063745,
+            "f1": 0.4169184290030212,
+            "support": 251
+          },
+          "SINUS_TACHYCARDIA": {
+            "recall": 0.9505494505494505,
+            "f1": 0.9153439153439152,
+            "support": 182
+          },
+          "ATRIAL_FIBRILLATION": {
+            "recall": 0.8839285714285714,
+            "f1": 0.8534482758620688,
+            "support": 112
+          },
+          "ATRIAL_FLUTTER": {
+            "recall": 0.6666666666666666,
+            "f1": 0.8,
+            "support": 3
+          },
+          "PAC": {
+            "recall": 0.5466666666666666,
+            "f1": 0.5030674846625767,
+            "support": 75
+          },
+          "PVC": {
+            "recall": 0.8677165354330708,
+            "f1": 0.8582554517133956,
+            "support": 635
+          },
+          "VENTRICULAR_TACHYCARDIA": {
+            "recall": 0.08139534883720931,
+            "f1": 0.15053763440860218,
+            "support": 86
+          },
+          "LBBB": {
+            "recall": 0.9032258064516129,
+            "f1": 0.9180327868852459,
+            "support": 31
+          },
+          "RBBB": {
+            "recall": 0.7142857142857143,
+            "f1": 0.2142857142857143,
+            "support": 21
+          },
+          "AV_BLOCK_1": {
+            "recall": 0.6333333333333333,
+            "f1": 0.7037037037037038,
+            "support": 30
+          }
+        }
+      },
+      "pred_single_lead_source_classes_native": 0.043351548269581056,
+      "pred_single_lead_source_classes_converted": 0.046994535519125684,
+      "flip_rate_by_true_class": {
+        "NORMAL_SINUS": 0.017437452615617893,
+        "SINUS_BRADYCARDIA": 0.03187250996015936,
+        "SINUS_TACHYCARDIA": 0.038461538461538464,
+        "ATRIAL_FIBRILLATION": 0.03571428571428571,
+        "ATRIAL_FLUTTER": 0.0,
+        "PAC": 0.04,
+        "PVC": 0.03622047244094488,
+        "VENTRICULAR_TACHYCARDIA": 0.023255813953488372,
+        "LBBB": 0.06451612903225806,
+        "RBBB": 0.23809523809523808,
+        "AV_BLOCK_1": 0.1
+      }
+    },
+    "0100000": {
+      "events": 3682,
+      "flip_rate": 0.051873981531776206,
+      "native": {
+        "n": 3682,
+        "accuracy": 0.7832699619771863,
+        "macro_f1": 0.6453169924684498,
+        "macro_recall": 0.6719535066012792,
+        "per_class": {
+          "NORMAL_SINUS": {
+            "recall": 0.9036442248301421,
+            "f1": 0.8388761467889909,
+            "support": 1619
+          },
+          "SINUS_BRADYCARDIA": {
+            "recall": 0.1691919191919192,
+            "f1": 0.28270042194092826,
+            "support": 396
+          },
+          "SINUS_TACHYCARDIA": {
+            "recall": 0.9322916666666666,
+            "f1": 0.8861386138613861,
+            "support": 192
+          },
+          "ATRIAL_FIBRILLATION": {
+            "recall": 0.8490566037735849,
+            "f1": 0.8845208845208845,
+            "support": 212
+          },
+          "ATRIAL_FLUTTER": {
+            "recall": 0.6666666666666666,
+            "f1": 0.8,
+            "support": 3
+          },
+          "PAC": {
+            "recall": 0.5633802816901409,
+            "f1": 0.5860805860805861,
+            "support": 142
+          },
+          "PVC": {
+            "recall": 0.9081145584725537,
+            "f1": 0.8767281105990784,
+            "support": 838
+          },
+          "VENTRICULAR_TACHYCARDIA": {
+            "recall": 0.08163265306122448,
+            "f1": 0.15094339622641506,
+            "support": 98
+          },
+          "LBBB": {
+            "recall": 0.6790123456790124,
+            "f1": 0.7971014492753624,
+            "support": 81
+          },
+          "RBBB": {
+            "recall": 0.971830985915493,
+            "f1": 0.5872340425531914,
+            "support": 71
+          },
+          "AV_BLOCK_1": {
+            "recall": 0.6666666666666666,
+            "f1": 0.40816326530612246,
+            "support": 30
+          }
+        }
+      },
+      "converted": {
+        "n": 3682,
+        "accuracy": 0.7645301466594242,
+        "macro_f1": 0.597439711714298,
+        "macro_recall": 0.6322189700495755,
+        "per_class": {
+          "NORMAL_SINUS": {
+            "recall": 0.9024088943792464,
+            "f1": 0.837729357798165,
+            "support": 1619
+          },
+          "SINUS_BRADYCARDIA": {
+            "recall": 0.17676767676767677,
+            "f1": 0.2928870292887029,
+            "support": 396
+          },
+          "SINUS_TACHYCARDIA": {
+            "recall": 0.8958333333333334,
+            "f1": 0.8775510204081632,
+            "support": 192
+          },
+          "ATRIAL_FIBRILLATION": {
+            "recall": 0.8066037735849056,
+            "f1": 0.8123515439429929,
+            "support": 212
+          },
+          "ATRIAL_FLUTTER": {
+            "recall": 0.6666666666666666,
+            "f1": 0.6666666666666666,
+            "support": 3
+          },
+          "PAC": {
+            "recall": 0.5070422535211268,
+            "f1": 0.5294117647058824,
+            "support": 142
+          },
+          "PVC": {
+            "recall": 0.8747016706443914,
+            "f1": 0.845444059976932,
+            "support": 838
+          },
+          "VENTRICULAR_TACHYCARDIA": {
+            "recall": 0.04081632653061224,
+            "f1": 0.07619047619047617,
+            "support": 98
+          },
+          "LBBB": {
+            "recall": 0.6666666666666666,
+            "f1": 0.7552447552447552,
+            "support": 81
+          },
+          "RBBB": {
+            "recall": 0.8169014084507042,
+            "f1": 0.5110132158590309,
+            "support": 71
+          },
+          "AV_BLOCK_1": {
+            "recall": 0.6,
+            "f1": 0.36734693877551017,
+            "support": 30
+          }
+        }
+      },
+      "pred_single_lead_source_classes_native": 0.055676262900597503,
+      "pred_single_lead_source_classes_converted": 0.059478544269418794,
+      "flip_rate_by_true_class": {
+        "NORMAL_SINUS": 0.030265596046942556,
+        "SINUS_BRADYCARDIA": 0.03787878787878788,
+        "SINUS_TACHYCARDIA": 0.052083333333333336,
+        "ATRIAL_FIBRILLATION": 0.08490566037735849,
+        "ATRIAL_FLUTTER": 0.0,
+        "PAC": 0.1267605633802817,
+        "PVC": 0.05489260143198091,
+        "VENTRICULAR_TACHYCARDIA": 0.09183673469387756,
+        "LBBB": 0.12345679012345678,
+        "RBBB": 0.16901408450704225,
+        "AV_BLOCK_1": 0.13333333333333333
+      }
+    }
+  }
+}

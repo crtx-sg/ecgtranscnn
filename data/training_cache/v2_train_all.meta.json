@@ -1,0 +1,17 @@
+{
+  "package_version": "v2",
+  "manifest_sha256": "096bdfbafa04ae4716be667f46807f6240efec60892fa0cb68a4a0f03bc76e8e",
+  "split": "train",
+  "leads": [
+    "ECG1",
+    "ECG2",
+    "ECG3",
+    "aVR",
+    "aVL",
+    "aVF",
+    "vVX"
+  ],
+  "n": 16920,
+  "max_samples": 2400,
+  "rows_sha256": "86b245d0604addeb2549c68ca7f94ff3790729be26b6e51f519c25afe54b9f3c"
+}

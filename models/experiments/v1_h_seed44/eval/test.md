@@ -1,0 +1,194 @@
+# v1 test — v1_h_seed44
+
+## crop2000
+
+Events 4046 · accuracy **0.775** · macro-F1 **0.633** (subject-bootstrap 95 % CI 0.583–0.734) · macro recall 0.725 · macro specificity 0.979 · macro AUROC 0.957
+
+Fewer than 5 subjects (indicative only): ATRIAL_FLUTTER
+
+| Class | Prec | Recall | Spec | F1 | AUROC | Events | Subjects |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| NORMAL_SINUS | 0.953 | 0.704 | 0.977 | 0.810 | 0.939 | 1619 | 800 |
+| SINUS_BRADYCARDIA | 0.590 | 0.944 | 0.929 | 0.726 | 0.977 | 396 | 59 |
+| SINUS_TACHYCARDIA | 0.590 | 0.995 | 0.965 | 0.740 | 0.995 | 192 | 50 |
+| ATRIAL_FIBRILLATION | 0.887 | 0.820 | 0.988 | 0.852 | 0.984 | 422 | 103 |
+| ATRIAL_FLUTTER ⚠ | 0.286 | 0.038 | 0.999 | 0.067 | 0.919 | 53 | 4 |
+| PAC | 0.398 | 0.451 | 0.975 | 0.422 | 0.801 | 142 | 34 |
+| PVC | 0.838 | 0.889 | 0.955 | 0.863 | 0.960 | 838 | 61 |
+| VENTRICULAR_TACHYCARDIA | 0.800 | 0.108 | 0.999 | 0.190 | 0.953 | 111 | 7 |
+| VENTRICULAR_FIBRILLATION | 0.898 | 0.967 | 0.997 | 0.931 | 0.999 | 91 | 6 |
+| LBBB | 0.918 | 0.963 | 0.998 | 0.940 | 0.998 | 81 | 26 |
+| RBBB | 0.398 | 0.958 | 0.974 | 0.562 | 0.972 | 71 | 20 |
+| AV_BLOCK_1 | 0.342 | 0.867 | 0.988 | 0.491 | 0.993 | 30 | 28 |
+
+### By dataset
+
+| Dataset | Events | Accuracy | Macro-F1 | Per-class F1 (events/subjects) |
+|---|---:|---:|---:|---|
+| `afdb` | 260 | 0.662 | 0.417 | ATRIAL_FIBRILLATION 0.83 (210/5), ATRIAL_FLUTTER 0.00 (50/1) |
+| `cudb` | 41 | 0.951 | 0.975 | VENTRICULAR_FIBRILLATION 0.97 (41/5) |
+| `incart` | 1512 | 0.761 | 0.627 | NORMAL_SINUS 0.75 (458/5), SINUS_BRADYCARDIA 0.84 (197/3), SINUS_TACHYCARDIA 0.84 (136/4), PAC 0.36 (50/4), PVC 0.86 (585/5), VENTRICULAR_TACHYCARDIA 0.11 (86/1) |
+| `mitbih` | 937 | 0.772 | 0.692 | NORMAL_SINUS 0.73 (300/6), SINUS_BRADYCARDIA 0.82 (145/4), SINUS_TACHYCARDIA 0.30 (10/2), ATRIAL_FIBRILLATION 0.82 (100/2), PAC 0.42 (67/5), PVC 0.88 (203/6), VENTRICULAR_TACHYCARDIA 0.27 (12/4), LBBB 0.98 (50/1), RBBB 1.00 (50/1) |
+| `ptbxl` | 1233 | 0.808 | 0.764 | NORMAL_SINUS 0.87 (861/789), SINUS_BRADYCARDIA 0.38 (54/52), SINUS_TACHYCARDIA 0.83 (46/44), ATRIAL_FIBRILLATION 0.91 (112/96), ATRIAL_FLUTTER 0.80 (3/3), PAC 0.55 (25/25), PVC 0.87 (50/50), LBBB 0.91 (31/25), RBBB 0.86 (21/19), AV_BLOCK_1 0.66 (30/28) |
+| `vfdb` | 63 | 0.857 | 0.721 | VENTRICULAR_TACHYCARDIA 0.53 (13/2), VENTRICULAR_FIBRILLATION 0.92 (50/1) |
+
+### By label method
+
+| Label method | Events | Accuracy | Macro-F1 | Per-class F1 (events/subjects) |
+|---|---:|---:|---:|---|
+| `beat_morphology` | 1763 | 0.746 | 0.717 | NORMAL_SINUS 0.75 (758/11), PAC 0.39 (117/9), PVC 0.93 (788/11), LBBB 0.98 (50/1), RBBB 0.54 (50/1) |
+| `beat_run` | 86 | 0.058 | 0.110 | VENTRICULAR_TACHYCARDIA 0.11 (86/1) |
+| `rate_derived` | 488 | 0.973 | 0.990 | SINUS_BRADYCARDIA 0.98 (342/7), SINUS_TACHYCARDIA 1.00 (146/6) |
+| `record_level` | 1233 | 0.808 | 0.764 | NORMAL_SINUS 0.87 (861/789), SINUS_BRADYCARDIA 0.38 (54/52), SINUS_TACHYCARDIA 0.83 (46/44), ATRIAL_FIBRILLATION 0.91 (112/96), ATRIAL_FLUTTER 0.80 (3/3), PAC 0.55 (25/25), PVC 0.87 (50/50), LBBB 0.91 (31/25), RBBB 0.86 (21/19), AV_BLOCK_1 0.66 (30/28) |
+| `rhythm_annotation` | 476 | 0.718 | 0.542 | ATRIAL_FIBRILLATION 0.84 (310/7), ATRIAL_FLUTTER 0.00 (50/1), VENTRICULAR_TACHYCARDIA 0.40 (25/6), VENTRICULAR_FIBRILLATION 0.93 (91/6) |
+
+### By real-lead mask
+
+| Real-lead mask | Events | Accuracy | Macro-F1 | Per-class F1 (events/subjects) |
+|---|---:|---:|---:|---|
+| `0100000` | 364 | 0.728 | 0.567 | ATRIAL_FIBRILLATION 0.83 (210/5), ATRIAL_FLUTTER 0.00 (50/1), VENTRICULAR_TACHYCARDIA 0.50 (13/2), VENTRICULAR_FIBRILLATION 0.93 (91/6) |
+| `0100001` | 937 | 0.772 | 0.692 | NORMAL_SINUS 0.73 (300/6), SINUS_BRADYCARDIA 0.82 (145/4), SINUS_TACHYCARDIA 0.30 (10/2), ATRIAL_FIBRILLATION 0.82 (100/2), PAC 0.42 (67/5), PVC 0.88 (203/6), VENTRICULAR_TACHYCARDIA 0.27 (12/4), LBBB 0.98 (50/1), RBBB 1.00 (50/1) |
+| `1111111` | 2745 | 0.782 | 0.665 | NORMAL_SINUS 0.83 (1319/794), SINUS_BRADYCARDIA 0.69 (251/55), SINUS_TACHYCARDIA 0.84 (182/48), ATRIAL_FIBRILLATION 0.91 (112/96), ATRIAL_FLUTTER 0.80 (3/3), PAC 0.43 (75/29), PVC 0.86 (635/55), VENTRICULAR_TACHYCARDIA 0.11 (86/1), LBBB 0.91 (31/25), RBBB 0.28 (21/19), AV_BLOCK_1 0.66 (30/28) |
+
+## full
+
+Events 4046 · accuracy **0.784** · macro-F1 **0.635** (subject-bootstrap 95 % CI 0.573–0.742) · macro recall 0.727 · macro specificity 0.980 · macro AUROC 0.968
+
+Fewer than 5 subjects (indicative only): ATRIAL_FLUTTER
+
+| Class | Prec | Recall | Spec | F1 | AUROC | Events | Subjects |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| NORMAL_SINUS | 0.970 | 0.714 | 0.985 | 0.822 | 0.947 | 1619 | 800 |
+| SINUS_BRADYCARDIA | 0.615 | 0.932 | 0.937 | 0.741 | 0.978 | 396 | 59 |
+| SINUS_TACHYCARDIA | 0.584 | 0.995 | 0.965 | 0.736 | 0.996 | 192 | 50 |
+| ATRIAL_FIBRILLATION | 0.884 | 0.827 | 0.987 | 0.854 | 0.985 | 422 | 103 |
+| ATRIAL_FLUTTER ⚠ | 0.375 | 0.057 | 0.999 | 0.098 | 0.949 | 53 | 4 |
+| PAC | 0.370 | 0.430 | 0.973 | 0.397 | 0.849 | 142 | 34 |
+| PVC | 0.835 | 0.926 | 0.952 | 0.878 | 0.982 | 838 | 61 |
+| VENTRICULAR_TACHYCARDIA | 0.727 | 0.072 | 0.999 | 0.131 | 0.956 | 111 | 7 |
+| VENTRICULAR_FIBRILLATION | 0.889 | 0.967 | 0.997 | 0.926 | 0.999 | 91 | 6 |
+| LBBB | 0.898 | 0.975 | 0.998 | 0.935 | 0.999 | 81 | 26 |
+| RBBB | 0.428 | 0.958 | 0.977 | 0.591 | 0.977 | 71 | 20 |
+| AV_BLOCK_1 | 0.356 | 0.867 | 0.988 | 0.505 | 0.993 | 30 | 28 |
+
+### By dataset
+
+| Dataset | Events | Accuracy | Macro-F1 | Per-class F1 (events/subjects) |
+|---|---:|---:|---:|---|
+| `afdb` | 260 | 0.673 | 0.436 | ATRIAL_FIBRILLATION 0.84 (210/5), ATRIAL_FLUTTER 0.04 (50/1) |
+| `cudb` | 41 | 0.927 | 0.962 | VENTRICULAR_FIBRILLATION 0.96 (41/5) |
+| `incart` | 1512 | 0.779 | 0.627 | NORMAL_SINUS 0.77 (458/5), SINUS_BRADYCARDIA 0.86 (197/3), SINUS_TACHYCARDIA 0.84 (136/4), PAC 0.36 (50/4), PVC 0.88 (585/5), VENTRICULAR_TACHYCARDIA 0.05 (86/1) |
+| `mitbih` | 937 | 0.782 | 0.691 | NORMAL_SINUS 0.76 (300/6), SINUS_BRADYCARDIA 0.85 (145/4), SINUS_TACHYCARDIA 0.28 (10/2), ATRIAL_FIBRILLATION 0.84 (100/2), PAC 0.35 (67/5), PVC 0.89 (203/6), VENTRICULAR_TACHYCARDIA 0.27 (12/4), LBBB 0.99 (50/1), RBBB 1.00 (50/1) |
+| `ptbxl` | 1233 | 0.808 | 0.764 | NORMAL_SINUS 0.87 (861/789), SINUS_BRADYCARDIA 0.38 (54/52), SINUS_TACHYCARDIA 0.83 (46/44), ATRIAL_FIBRILLATION 0.91 (112/96), ATRIAL_FLUTTER 0.80 (3/3), PAC 0.55 (25/25), PVC 0.87 (50/50), LBBB 0.91 (31/25), RBBB 0.86 (21/19), AV_BLOCK_1 0.66 (30/28) |
+| `vfdb` | 63 | 0.857 | 0.694 | VENTRICULAR_TACHYCARDIA 0.47 (13/2), VENTRICULAR_FIBRILLATION 0.92 (50/1) |
+
+### By label method
+
+| Label method | Events | Accuracy | Macro-F1 | Per-class F1 (events/subjects) |
+|---|---:|---:|---:|---|
+| `beat_morphology` | 1763 | 0.772 | 0.728 | NORMAL_SINUS 0.78 (758/11), PAC 0.36 (117/9), PVC 0.95 (788/11), LBBB 0.99 (50/1), RBBB 0.57 (50/1) |
+| `beat_run` | 86 | 0.023 | 0.045 | VENTRICULAR_TACHYCARDIA 0.05 (86/1) |
+| `rate_derived` | 488 | 0.963 | 0.986 | SINUS_BRADYCARDIA 0.97 (342/7), SINUS_TACHYCARDIA 1.00 (146/6) |
+| `record_level` | 1233 | 0.808 | 0.764 | NORMAL_SINUS 0.87 (861/789), SINUS_BRADYCARDIA 0.38 (54/52), SINUS_TACHYCARDIA 0.83 (46/44), ATRIAL_FIBRILLATION 0.91 (112/96), ATRIAL_FLUTTER 0.80 (3/3), PAC 0.55 (25/25), PVC 0.87 (50/50), LBBB 0.91 (31/25), RBBB 0.86 (21/19), AV_BLOCK_1 0.66 (30/28) |
+| `rhythm_annotation` | 476 | 0.725 | 0.539 | ATRIAL_FIBRILLATION 0.84 (310/7), ATRIAL_FLUTTER 0.04 (50/1), VENTRICULAR_TACHYCARDIA 0.35 (25/6), VENTRICULAR_FIBRILLATION 0.93 (91/6) |
+
+### By real-lead mask
+
+| Real-lead mask | Events | Accuracy | Macro-F1 | Per-class F1 (events/subjects) |
+|---|---:|---:|---:|---|
+| `0100000` | 364 | 0.734 | 0.555 | ATRIAL_FIBRILLATION 0.84 (210/5), ATRIAL_FLUTTER 0.04 (50/1), VENTRICULAR_TACHYCARDIA 0.42 (13/2), VENTRICULAR_FIBRILLATION 0.93 (91/6) |
+| `0100001` | 937 | 0.782 | 0.691 | NORMAL_SINUS 0.76 (300/6), SINUS_BRADYCARDIA 0.85 (145/4), SINUS_TACHYCARDIA 0.28 (10/2), ATRIAL_FIBRILLATION 0.84 (100/2), PAC 0.35 (67/5), PVC 0.89 (203/6), VENTRICULAR_TACHYCARDIA 0.27 (12/4), LBBB 0.99 (50/1), RBBB 1.00 (50/1) |
+| `1111111` | 2745 | 0.792 | 0.664 | NORMAL_SINUS 0.84 (1319/794), SINUS_BRADYCARDIA 0.69 (251/55), SINUS_TACHYCARDIA 0.84 (182/48), ATRIAL_FIBRILLATION 0.90 (112/96), ATRIAL_FLUTTER 0.80 (3/3), PAC 0.43 (75/29), PVC 0.88 (635/55), VENTRICULAR_TACHYCARDIA 0.05 (86/1), LBBB 0.91 (31/25), RBBB 0.31 (21/19), AV_BLOCK_1 0.66 (30/28) |
+
+## leadconv_0100001
+
+Events 2745 · accuracy **0.778** · macro-F1 **0.650** (subject-bootstrap 95 % CI 0.585–0.791) · macro recall 0.749 · macro specificity 0.977 · macro AUROC 0.957
+
+Classes absent from this split: VENTRICULAR_FIBRILLATION
+
+Fewer than 5 subjects (indicative only): ATRIAL_FLUTTER, VENTRICULAR_TACHYCARDIA
+
+| Class | Prec | Recall | Spec | F1 | AUROC | Events | Subjects |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| NORMAL_SINUS | 0.967 | 0.726 | 0.977 | 0.829 | 0.927 | 1319 | 794 |
+| SINUS_BRADYCARDIA | 0.533 | 0.960 | 0.915 | 0.686 | 0.967 | 251 | 55 |
+| SINUS_TACHYCARDIA | 0.746 | 0.984 | 0.976 | 0.848 | 0.995 | 182 | 48 |
+| ATRIAL_FIBRILLATION | 0.883 | 0.875 | 0.995 | 0.879 | 0.985 | 112 | 96 |
+| ATRIAL_FLUTTER ⚠ | 1.000 | 0.667 | 1.000 | 0.800 | 0.999 | 3 | 3 |
+| PAC | 0.358 | 0.507 | 0.975 | 0.420 | 0.796 | 75 | 29 |
+| PVC | 0.840 | 0.860 | 0.951 | 0.850 | 0.950 | 635 | 55 |
+| VENTRICULAR_TACHYCARDIA ⚠ | 0.500 | 0.023 | 0.999 | 0.044 | 0.973 | 86 | 1 |
+| VENTRICULAR_FIBRILLATION | 0.000 | 0.000 | 1.000 | 0.000 | — | 0 | 0 |
+| LBBB | 0.824 | 0.903 | 0.998 | 0.862 | 0.998 | 31 | 25 |
+| RBBB | 0.178 | 0.905 | 0.968 | 0.297 | 0.947 | 21 | 19 |
+| AV_BLOCK_1 | 0.510 | 0.833 | 0.991 | 0.633 | 0.991 | 30 | 28 |
+
+### By dataset
+
+| Dataset | Events | Accuracy | Macro-F1 | Per-class F1 (events/subjects) |
+|---|---:|---:|---:|---|
+| `incart` | 1512 | 0.772 | 0.629 | NORMAL_SINUS 0.79 (458/5), SINUS_BRADYCARDIA 0.88 (197/3), SINUS_TACHYCARDIA 0.85 (136/4), PAC 0.35 (50/4), PVC 0.85 (585/5), VENTRICULAR_TACHYCARDIA 0.04 (86/1) |
+| `ptbxl` | 1233 | 0.785 | 0.749 | NORMAL_SINUS 0.85 (861/789), SINUS_BRADYCARDIA 0.36 (54/52), SINUS_TACHYCARDIA 0.83 (46/44), ATRIAL_FIBRILLATION 0.89 (112/96), ATRIAL_FLUTTER 0.80 (3/3), PAC 0.53 (25/25), PVC 0.85 (50/50), LBBB 0.86 (31/25), RBBB 0.88 (21/19), AV_BLOCK_1 0.63 (30/28) |
+
+### By label method
+
+| Label method | Events | Accuracy | Macro-F1 | Per-class F1 (events/subjects) |
+|---|---:|---:|---:|---|
+| `beat_morphology` | 1093 | 0.765 | 0.687 | NORMAL_SINUS 0.79 (458/5), PAC 0.35 (50/4), PVC 0.91 (585/5) |
+| `beat_run` | 86 | 0.023 | 0.045 | VENTRICULAR_TACHYCARDIA 0.05 (86/1) |
+| `rate_derived` | 333 | 0.988 | 0.994 | SINUS_BRADYCARDIA 0.99 (197/3), SINUS_TACHYCARDIA 1.00 (136/4) |
+| `record_level` | 1233 | 0.785 | 0.749 | NORMAL_SINUS 0.85 (861/789), SINUS_BRADYCARDIA 0.36 (54/52), SINUS_TACHYCARDIA 0.83 (46/44), ATRIAL_FIBRILLATION 0.89 (112/96), ATRIAL_FLUTTER 0.80 (3/3), PAC 0.53 (25/25), PVC 0.85 (50/50), LBBB 0.86 (31/25), RBBB 0.88 (21/19), AV_BLOCK_1 0.63 (30/28) |
+
+### By real-lead mask
+
+| Real-lead mask | Events | Accuracy | Macro-F1 | Per-class F1 (events/subjects) |
+|---|---:|---:|---:|---|
+| `1111111` | 2745 | 0.778 | 0.650 | NORMAL_SINUS 0.83 (1319/794), SINUS_BRADYCARDIA 0.69 (251/55), SINUS_TACHYCARDIA 0.85 (182/48), ATRIAL_FIBRILLATION 0.88 (112/96), ATRIAL_FLUTTER 0.80 (3/3), PAC 0.42 (75/29), PVC 0.85 (635/55), VENTRICULAR_TACHYCARDIA 0.04 (86/1), LBBB 0.86 (31/25), RBBB 0.30 (21/19), AV_BLOCK_1 0.63 (30/28) |
+
+## leadconv_0100000
+
+Events 3682 · accuracy **0.773** · macro-F1 **0.648** (subject-bootstrap 95 % CI 0.552–0.712) · macro recall 0.718 · macro specificity 0.976 · macro AUROC 0.959
+
+Classes absent from this split: VENTRICULAR_FIBRILLATION
+
+Fewer than 5 subjects (indicative only): ATRIAL_FLUTTER
+
+| Class | Prec | Recall | Spec | F1 | AUROC | Events | Subjects |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| NORMAL_SINUS | 0.957 | 0.716 | 0.975 | 0.819 | 0.931 | 1619 | 800 |
+| SINUS_BRADYCARDIA | 0.600 | 0.952 | 0.924 | 0.736 | 0.968 | 396 | 59 |
+| SINUS_TACHYCARDIA | 0.630 | 0.984 | 0.968 | 0.768 | 0.994 | 192 | 50 |
+| ATRIAL_FIBRILLATION | 0.835 | 0.811 | 0.990 | 0.823 | 0.985 | 212 | 98 |
+| ATRIAL_FLUTTER ⚠ | 1.000 | 0.667 | 1.000 | 0.800 | 0.999 | 3 | 3 |
+| PAC | 0.424 | 0.415 | 0.977 | 0.420 | 0.799 | 142 | 34 |
+| PVC | 0.838 | 0.874 | 0.950 | 0.855 | 0.953 | 838 | 61 |
+| VENTRICULAR_TACHYCARDIA | 0.545 | 0.061 | 0.999 | 0.110 | 0.967 | 98 | 5 |
+| VENTRICULAR_FIBRILLATION | 0.000 | 0.000 | 1.000 | 0.000 | — | 0 | 0 |
+| LBBB | 0.883 | 0.840 | 0.998 | 0.861 | 0.996 | 81 | 26 |
+| RBBB | 0.390 | 0.873 | 0.973 | 0.539 | 0.973 | 71 | 20 |
+| AV_BLOCK_1 | 0.280 | 0.700 | 0.985 | 0.400 | 0.983 | 30 | 28 |
+
+### By dataset
+
+| Dataset | Events | Accuracy | Macro-F1 | Per-class F1 (events/subjects) |
+|---|---:|---:|---:|---|
+| `incart` | 1512 | 0.771 | 0.632 | NORMAL_SINUS 0.80 (458/5), SINUS_BRADYCARDIA 0.89 (197/3), SINUS_TACHYCARDIA 0.85 (136/4), PAC 0.32 (50/4), PVC 0.85 (585/5), VENTRICULAR_TACHYCARDIA 0.09 (86/1) |
+| `mitbih` | 937 | 0.796 | 0.706 | NORMAL_SINUS 0.79 (300/6), SINUS_BRADYCARDIA 0.86 (145/4), SINUS_TACHYCARDIA 0.30 (10/2), ATRIAL_FIBRILLATION 0.85 (100/2), PAC 0.51 (67/5), PVC 0.89 (203/6), VENTRICULAR_TACHYCARDIA 0.25 (12/4), LBBB 0.90 (50/1), RBBB 1.00 (50/1) |
+| `ptbxl` | 1233 | 0.759 | 0.677 | NORMAL_SINUS 0.84 (861/789), SINUS_BRADYCARDIA 0.33 (54/52), SINUS_TACHYCARDIA 0.81 (46/44), ATRIAL_FIBRILLATION 0.86 (112/96), ATRIAL_FLUTTER 0.80 (3/3), PAC 0.42 (25/25), PVC 0.81 (50/50), LBBB 0.81 (31/25), RBBB 0.51 (21/19), AV_BLOCK_1 0.57 (30/28) |
+
+### By label method
+
+| Label method | Events | Accuracy | Macro-F1 | Per-class F1 (events/subjects) |
+|---|---:|---:|---:|---|
+| `beat_morphology` | 1763 | 0.766 | 0.717 | NORMAL_SINUS 0.80 (758/11), PAC 0.42 (117/9), PVC 0.92 (788/11), LBBB 0.89 (50/1), RBBB 0.55 (50/1) |
+| `beat_run` | 86 | 0.047 | 0.089 | VENTRICULAR_TACHYCARDIA 0.09 (86/1) |
+| `rate_derived` | 488 | 0.980 | 0.992 | SINUS_BRADYCARDIA 0.99 (342/7), SINUS_TACHYCARDIA 1.00 (146/6) |
+| `record_level` | 1233 | 0.759 | 0.677 | NORMAL_SINUS 0.84 (861/789), SINUS_BRADYCARDIA 0.33 (54/52), SINUS_TACHYCARDIA 0.81 (46/44), ATRIAL_FIBRILLATION 0.86 (112/96), ATRIAL_FLUTTER 0.80 (3/3), PAC 0.42 (25/25), PVC 0.81 (50/50), LBBB 0.81 (31/25), RBBB 0.51 (21/19), AV_BLOCK_1 0.57 (30/28) |
+| `rhythm_annotation` | 112 | 0.696 | 0.560 | ATRIAL_FIBRILLATION 0.85 (100/2), VENTRICULAR_TACHYCARDIA 0.27 (12/4) |
+
+### By real-lead mask
+
+| Real-lead mask | Events | Accuracy | Macro-F1 | Per-class F1 (events/subjects) |
+|---|---:|---:|---:|---|
+| `0100001` | 937 | 0.796 | 0.706 | NORMAL_SINUS 0.79 (300/6), SINUS_BRADYCARDIA 0.86 (145/4), SINUS_TACHYCARDIA 0.30 (10/2), ATRIAL_FIBRILLATION 0.85 (100/2), PAC 0.51 (67/5), PVC 0.89 (203/6), VENTRICULAR_TACHYCARDIA 0.25 (12/4), LBBB 0.90 (50/1), RBBB 1.00 (50/1) |
+| `1111111` | 2745 | 0.765 | 0.617 | NORMAL_SINUS 0.83 (1319/794), SINUS_BRADYCARDIA 0.68 (251/55), SINUS_TACHYCARDIA 0.84 (182/48), ATRIAL_FIBRILLATION 0.80 (112/96), ATRIAL_FLUTTER 0.80 (3/3), PAC 0.36 (75/29), PVC 0.84 (635/55), VENTRICULAR_TACHYCARDIA 0.09 (86/1), LBBB 0.80 (31/25), RBBB 0.18 (21/19), AV_BLOCK_1 0.57 (30/28) |

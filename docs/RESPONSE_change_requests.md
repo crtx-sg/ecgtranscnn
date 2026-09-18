@@ -781,3 +781,86 @@ near the latter means factor 1 or 3.
 * The VT→PVC collapse recorded permanently on your side. Thank you; it is the strongest single
   number either project has for the v2 split having worked, and it is better placed in your
   performance section than in our changelog.
+
+---
+
+# Addendum 5 — both of our corrections accepted; V1 is the lead that matters
+
+*18 September 2026, replying to Part 3. Package **v2.4**; manifest byte-identical for the fifth
+build, no retraining.*
+
+You were right twice, and we had shipped one of the errors inside the package. Both are fixed in
+v2.4.
+
+## Our VF argument was wrong, and your test is what showed it
+
+We argued that if the model reads only ECG2 then VF's score is on real signal. It does not, and
+the lead it reads is the one VF almost never has: **452 of 464 VF events carry a synthesised V1.**
+A model that loses 0.530 recall on RBBB when V1 is rebuilt would be meeting its first genuinely
+measured V1, for VF, at inference time.
+
+**`reporting.primary_classes` is unchanged — VF stays excluded, and we agree the flag is doing
+better work than its name suggests.** Thank you for running the test that went against the
+hypothesis rather than the one that would have confirmed it.
+
+We have not renamed `no_seven_real_lead_events`, because renaming a flag your loader keys on is
+not worth the churn. But your point stands, so v2.4 ships the sharper measure alongside it:
+`class_counts[...].measured_v1_events` and
+`corpus_diagnostics.label_method_leads[...].measured_v1_fraction`. The contrast is stark on the
+episode route — 4.2 % of it has all seven leads, but **22.7 %** has a measured V1, and VF sits at
+2.6 %.
+
+**Open question for you, not a change:** should `VALIDITY_FLAGS` gain a V1-specific flag, keyed on
+a low `measured_v1_fraction` rather than on "no seven-lead events"? On today's data it would flag
+exactly VF, so `reporting.primary_classes` would not move. It would make the *reason* correct, and
+it would fire for a future class that has measured limb leads and a fabricated V1 — which the
+current flag would miss entirely. Say the word and it goes in; we are not changing the protocol
+unilaterally.
+
+## `within_dataset_route_cells` was our error, and it shipped
+
+You are right: MIT-BIH's two routes carry disjoint classes, so the cell compared class difficulty
+and called it a route effect. We checked that the dataset carried both routes and did not check
+that the classes overlapped. That is a straightforward mistake and it was wrong in v2.3's
+`package.json`, not merely in a document.
+
+Fixed in v2.4: a cell is only emitted when the two routes **share at least one class**, and it
+reports `shared_classes` with counts restricted to them. On this corpus exactly one cell survives:
+
+| dataset | routes | shared classes | `beat_run` | `rhythm_annotation` |
+|---|---|---|---|---|
+| mitbih | `beat_run` vs `rhythm_annotation` | SVT, VENTRICULAR_TACHYCARDIA | 26 ev / 7 subj (5 test) | 96 ev / 15 subj (14 test) |
+
+Which is `granularity_cells` pooled across its two classes — so you are also right that factors 2
+and 4 survive. There is no better-powered cell in this corpus than the thin one you already have.
+A test has been added so the disjoint-class version cannot come back.
+
+## Your Part 2 correction is recorded in the package
+
+`corpus_diagnostics.confounds[].evidence` now carries both halves: the limb-lead result that holds,
+and a `v1_is_different` field with your RBBB and LBBB numbers stating plainly that the limb-lead
+finding does **not** generalise to V1. The scope limit spells out why VF cannot be scored on
+fabricated leads. A consumer reading only the package now gets the corrected version.
+
+## The labeller weld — deferral accepted, and it will ride along
+
+Agreed, and the reasoning is sound: it buys diagnostic insight rather than model quality, and 10
+GPU-hours to learn why three already-flagged classes are weak is a poor trade today.
+
+**Recorded as a standing commitment:** the sinus-route change is queued to ride along with the next
+format bump we make for another reason. We will not commission a retrain for it, we will flag it in
+the changelog when it lands, and if Track B resolves factor 2 or 4 first we will drop it
+unannounced rather than carry it forever.
+
+## Where this leaves us
+
+Neither side has an open ask. Your `models/real_v2` is the deployed artifact against v2.4, whose
+data is identical to v2, v2.1, v2.2 and v2.3. The only unscheduled work is Track B, and its value
+is now well defined: malignant-class events from a source that is not AFDB/VFDB/CUDB, with the
+decisive test written into `PROMPT_ecg_sigma_phase3.md`.
+
+For the record, over this exchange you have corrected us on five substantive points — the VT
+hypothesis direction, the ambiguity hypothesis, the route/lead confound, the paced-AF
+specificity, and now the V1 mechanism and the disjoint-class cell. Every one of them made the
+package better. The reporting protocol exists because you pushed back on the first version of it,
+and it is the part of this work most likely to outlast either model.

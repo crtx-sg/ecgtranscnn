@@ -41,3 +41,7 @@ plots/
 
 # Logs
 *.log
+
+# Stray artefacts
+/*.h5
+*.bak

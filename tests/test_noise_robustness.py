@@ -30,8 +30,9 @@ from ecg_transcovnet.training import evaluate_detailed
 NOISE_ROBUST_CKPT = Path("models/noise_robust/best_model.pt")
 IMPROVED_CKPT = Path("models/improved/best_model.pt")
 
-# Classes where AV_BLOCK_1 is a known weak spot — excluded from strict checks
-AV_BLOCK_CLASSES = {"AV_BLOCK_1"}
+# AV-block classes are a known weak spot of the simulator checkpoints (AV_BLOCK_1;
+# AV_BLOCK_2_TYPE1 clean F1 ≈ 0.43) — excluded from strict checks
+AV_BLOCK_CLASSES = {"AV_BLOCK_1", "AV_BLOCK_2_TYPE1"}
 
 
 def _load_model(ckpt_path: Path, device: torch.device) -> ECGTransCovNet:

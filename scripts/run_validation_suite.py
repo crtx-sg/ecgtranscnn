@@ -2,7 +2,8 @@
 """Run the validation suite against a trained model and produce a comprehensive report.
 
 Processes all HDF5 files in a validation suite directory, computes per-file and
-aggregate metrics, and generates visual reports.
+aggregate metrics, and generates visual reports. Works with legacy 16-class and
+package-trained checkpoints, and with simulator and ecg_sigma HDF5 files.
 
 Usage:
     python scripts/run_validation_suite.py \\
@@ -34,63 +35,43 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from ecg_transcovnet import (
-    ECGTransCovNet,
-    NUM_CLASSES,
-    CLASS_NAMES,
-    SIGNAL_LENGTH,
-    ALL_LEADS,
-)
-from ecg_transcovnet.simulator.conditions import Condition
+from ecg_transcovnet import FILTER_PRESETS, PreprocessingPipeline
+from ecg_transcovnet.checkpoint import load_model as load_checkpoint_model
+from ecg_transcovnet.classes import ClassSpec
+from ecg_transcovnet.hdf5_io import event_keys as list_event_keys, read_ecg_leads
 
-# Reverse mapping: condition value → class index
-_COND_TO_IDX = {}
-for _i, _c in enumerate(Condition):
-    _COND_TO_IDX[_c.value] = _i
+# Conditions are resolved by enum value (simulator, e.g. "V") or name
+# (ecg_sigma, e.g. "PVC"); labels outside the head are skipped with one warning.
+_NOT_IN_HEAD_SEEN: set[str] = set()
 
 
 # ── Model loading ─────────────────────────────────────────────────────────────
 
 def load_model(checkpoint_path: str, device: torch.device):
-    ckpt_path = Path(checkpoint_path)
-    if not ckpt_path.exists():
-        print(f"Error: checkpoint not found at {ckpt_path}")
+    try:
+        loaded = load_checkpoint_model(checkpoint_path, device)
+    except FileNotFoundError as exc:
+        print(f"Error: {exc}")
         sys.exit(1)
-
-    ckpt = torch.load(ckpt_path, weights_only=False, map_location=device)
-    saved_args = ckpt.get("args", {})
-    leads = ckpt.get("leads", ALL_LEADS)
-    in_channels = len(leads)
-
-    model = ECGTransCovNet(
-        num_classes=NUM_CLASSES,
-        in_channels=in_channels,
-        signal_length=SIGNAL_LENGTH,
-        embed_dim=saved_args.get("embed_dim", 128),
-        nhead=saved_args.get("nhead", 8),
-        num_encoder_layers=saved_args.get("num_encoder_layers", 3),
-        num_decoder_layers=saved_args.get("num_decoder_layers", 3),
-        dim_feedforward=saved_args.get("dim_feedforward", 512),
-        dropout=saved_args.get("dropout", 0.1),
-    ).to(device)
-    model.load_state_dict(ckpt["model_state_dict"])
-    model.eval()
-
+    ckpt = loaded.checkpoint
     epoch = ckpt.get("epoch", "?")
     val_acc = ckpt.get("val_acc", "?")
-    return model, leads, epoch, val_acc
+    return loaded.model, loaded.leads, epoch, val_acc, loaded.class_spec, loaded.filter_preset
 
 
 # ── Per-file inference ────────────────────────────────────────────────────────
 
-@dataclass_free
 def process_file(
     filepath: Path,
     model: torch.nn.Module,
     leads: list[str],
     device: torch.device,
+    class_spec: ClassSpec | None = None,
+    pipeline: PreprocessingPipeline | None = None,
 ) -> list[dict]:
     """Run inference on all events in an HDF5 file. Returns list of result dicts."""
+    spec = class_spec or ClassSpec.default()
+    pipeline = pipeline or PreprocessingPipeline(FILTER_PRESETS["none"])
     results = []
     try:
         hf = h5py.File(filepath, "r")
@@ -99,8 +80,7 @@ def process_file(
         return results
 
     with hf:
-        event_keys = sorted(k for k in hf.keys() if k.startswith("event_"))
-        for event_key in event_keys:
+        for event_key in list_event_keys(hf):
             grp = hf[event_key]
             event_id = event_key.replace("event_", "")
 
@@ -108,29 +88,23 @@ def process_file(
             gt_val = grp.attrs.get("condition", None)
             if gt_val is None:
                 continue
-            if isinstance(gt_val, bytes):
-                gt_val = gt_val.decode("utf-8")
-            gt_idx = _COND_TO_IDX.get(gt_val)
+            gt_name, gt_idx = spec.resolve(gt_val)
             if gt_idx is None:
+                if gt_name not in _NOT_IN_HEAD_SEEN:
+                    _NOT_IN_HEAD_SEEN.add(gt_name)
+                    print(f"    [!] Ground truth '{gt_name}' is not in the model head — event(s) skipped")
                 continue
 
             # ECG leads
             if "ecg" not in grp:
                 continue
-            ecg_grp = grp["ecg"]
-            lead_arrays = []
-            for lead in leads:
-                if lead in ecg_grp:
-                    lead_arrays.append(ecg_grp[lead][:])
-                else:
-                    lead_arrays.append(np.zeros(SIGNAL_LENGTH, dtype=np.float32))
-            signal = np.stack(lead_arrays, axis=0)
+            try:
+                signal = read_ecg_leads(grp["ecg"], leads)
+            except KeyError:
+                continue
 
-            # Per-lead z-score normalisation
-            for ch in range(signal.shape[0]):
-                mu, std = signal[ch].mean(), signal[ch].std()
-                if std > 1e-6:
-                    signal[ch] = (signal[ch] - mu) / std
+            # Preprocessing (preset "none" = per-lead z-score only)
+            signal = pipeline(signal)
 
             # Inference
             with torch.no_grad():
@@ -144,9 +118,9 @@ def process_file(
             results.append({
                 "event_id": event_id,
                 "gt_idx": gt_idx,
-                "gt_name": CLASS_NAMES[gt_idx],
+                "gt_name": spec.names[gt_idx],
                 "pred_idx": pred_idx,
-                "pred_name": CLASS_NAMES[pred_idx],
+                "pred_name": spec.names[pred_idx],
                 "confidence": confidence,
                 "correct": pred_idx == gt_idx,
             })
@@ -154,23 +128,19 @@ def process_file(
     return results
 
 
-# Avoid dataclass import issues — use plain function
-def process_file_wrapper(*args, **kwargs):
-    return process_file(*args, **kwargs)
-
-
 # ── Metrics computation ───────────────────────────────────────────────────────
 
-def compute_metrics(y_true: list[int], y_pred: list[int]) -> dict:
+def compute_metrics(y_true: list[int], y_pred: list[int], class_names: list[str]) -> dict:
     """Compute accuracy, per-class precision/recall/F1, macro F1, confusion matrix."""
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
+    n_classes = len(class_names)
 
     accuracy = float((y_true == y_pred).mean()) if len(y_true) > 0 else 0.0
 
     per_class = {}
     f1_scores = []
-    for idx in range(NUM_CLASSES):
+    for idx in range(n_classes):
         tp = int(((y_true == idx) & (y_pred == idx)).sum())
         fp = int(((y_true != idx) & (y_pred == idx)).sum())
         fn = int(((y_true == idx) & (y_pred != idx)).sum())
@@ -182,7 +152,7 @@ def compute_metrics(y_true: list[int], y_pred: list[int]) -> dict:
         spec = tn / (tn + fp) if (tn + fp) > 0 else 0.0
         f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
 
-        per_class[CLASS_NAMES[idx]] = {
+        per_class[class_names[idx]] = {
             "precision": prec, "recall": rec, "specificity": spec,
             "f1": f1, "support": support,
         }
@@ -192,7 +162,7 @@ def compute_metrics(y_true: list[int], y_pred: list[int]) -> dict:
     macro_f1 = float(np.mean(f1_scores)) if f1_scores else 0.0
 
     # Confusion matrix
-    cm = np.zeros((NUM_CLASSES, NUM_CLASSES), dtype=int)
+    cm = np.zeros((n_classes, n_classes), dtype=int)
     for t, p in zip(y_true, y_pred):
         cm[t, p] += 1
 
@@ -208,13 +178,13 @@ def compute_metrics(y_true: list[int], y_pred: list[int]) -> dict:
 
 # ── Visualization ─────────────────────────────────────────────────────────────
 
-def save_confusion_matrix(cm: np.ndarray, title: str, path: str):
+def save_confusion_matrix(cm: np.ndarray, title: str, path: str, class_names: list[str]):
     fig, ax = plt.subplots(figsize=(14, 12))
     im = ax.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
     ax.figure.colorbar(im, ax=ax)
     ax.set(
         xticks=range(cm.shape[1]), yticks=range(cm.shape[0]),
-        xticklabels=CLASS_NAMES, yticklabels=CLASS_NAMES,
+        xticklabels=class_names, yticklabels=class_names,
         title=title, ylabel="True", xlabel="Predicted",
     )
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right", fontsize=7)
@@ -270,11 +240,11 @@ def save_noise_comparison_chart(noise_metrics: dict[str, dict], path: str):
     plt.close()
 
 
-def save_per_class_f1_chart(per_class: dict, title: str, path: str):
+def save_per_class_f1_chart(per_class: dict, title: str, path: str, class_names: list[str]):
     """Horizontal bar chart of per-class F1 scores."""
     names = []
     f1s = []
-    for name in CLASS_NAMES:
+    for name in class_names:
         if per_class[name]["support"] > 0:
             names.append(name)
             f1s.append(per_class[name]["f1"])
@@ -320,6 +290,7 @@ def generate_report(
     save_plots: bool,
 ):
     """Generate comprehensive text + visual report from all file results."""
+    class_names = list(checkpoint_info.get("class_names") or ClassSpec.default().names)
     report_dir = output_dir / "report"
     report_dir.mkdir(parents=True, exist_ok=True)
 
@@ -335,24 +306,15 @@ def generate_report(
     rprint(f"  Epoch:       {checkpoint_info['epoch']}")
     rprint(f"  Val accuracy: {checkpoint_info['val_acc']}")
     rprint(f"  Device:      {checkpoint_info['device']}")
+    rprint(f"  Head:        {len(class_names)} classes · filter preset {checkpoint_info.get('filter_preset', 'none')}")
 
     # ── Per-file results ──
     all_true, all_pred = [], []
     noise_buckets: dict[str, dict] = defaultdict(lambda: {"true": [], "pred": []})
 
     for fr in file_results:
-        filename = fr["filename"]
         noise = fr["noise_level"]
-        results = fr["results"]
-
-        if not results:
-            continue
-
-        correct = sum(1 for r in results if r["correct"])
-        total = len(results)
-        acc = correct / total if total > 0 else 0
-
-        for r in results:
+        for r in fr["results"]:
             all_true.append(r["gt_idx"])
             all_pred.append(r["pred_idx"])
             noise_buckets[noise]["true"].append(r["gt_idx"])
@@ -374,7 +336,7 @@ def generate_report(
 
     # ── Aggregate metrics ──
     print_section("Aggregate Metrics")
-    agg = compute_metrics(all_true, all_pred)
+    agg = compute_metrics(all_true, all_pred, class_names)
     rprint(f"  Total events:  {agg['total']}")
     rprint(f"  Correct:       {agg['correct']}")
     rprint(f"  Accuracy:      {agg['accuracy']:.4f} ({agg['accuracy'] * 100:.1f}%)")
@@ -384,7 +346,7 @@ def generate_report(
     print_section("Per-Class Metrics (Aggregate)", "-")
     rprint(f"  {'Condition':<28s} {'Prec':>6s} {'Rec':>6s} {'Spec':>6s} {'F1':>6s} {'N':>5s}")
     rprint("  " + "-" * 57)
-    for name in CLASS_NAMES:
+    for name in class_names:
         m = agg["per_class"][name]
         if m["support"] > 0:
             rprint(
@@ -401,7 +363,7 @@ def generate_report(
         if noise not in noise_buckets:
             continue
         bucket = noise_buckets[noise]
-        nm = compute_metrics(bucket["true"], bucket["pred"])
+        nm = compute_metrics(bucket["true"], bucket["pred"], class_names)
         noise_metrics[noise] = nm
         rprint(
             f"  {noise:<12s} {nm['total']:>7d} "
@@ -412,19 +374,19 @@ def generate_report(
     av_conditions = {"AV_BLOCK_1", "AV_BLOCK_2_TYPE1", "AV_BLOCK_2_TYPE2", "NORMAL_SINUS"}
     av_true, av_pred = [], []
     for t, p in zip(all_true, all_pred):
-        if CLASS_NAMES[t] in av_conditions:
+        if class_names[t] in av_conditions:
             av_true.append(t)
             av_pred.append(p)
 
     if av_true:
         print_section("AV Block Discrimination (Key Validation)", "-")
-        av_metrics = compute_metrics(av_true, av_pred)
+        av_metrics = compute_metrics(av_true, av_pred, class_names)
         rprint(f"  Events (N/1AVB/2AVB1/2AVB2 only): {len(av_true)}")
         rprint(f"  Accuracy: {av_metrics['accuracy']:.4f} ({av_metrics['accuracy'] * 100:.1f}%)")
         rprint()
         for name in ["NORMAL_SINUS", "AV_BLOCK_1", "AV_BLOCK_2_TYPE1", "AV_BLOCK_2_TYPE2"]:
-            m = av_metrics["per_class"][name]
-            if m["support"] > 0:
+            m = av_metrics["per_class"].get(name)
+            if m and m["support"] > 0:
                 rprint(
                     f"  {name:<28s} Prec={m['precision']:.3f}  "
                     f"Rec={m['recall']:.3f}  F1={m['f1']:.3f}  N={m['support']}"
@@ -460,11 +422,11 @@ def generate_report(
         print_section("Saving Visual Reports", "-")
 
         cm_path = str(report_dir / "confusion_matrix_aggregate.png")
-        save_confusion_matrix(agg["confusion_matrix"], "Aggregate Confusion Matrix", cm_path)
+        save_confusion_matrix(agg["confusion_matrix"], "Aggregate Confusion Matrix", cm_path, class_names)
         rprint(f"  Saved: {cm_path}")
 
         f1_path = str(report_dir / "per_class_f1_aggregate.png")
-        save_per_class_f1_chart(agg["per_class"], "Per-Class F1 (Aggregate)", f1_path)
+        save_per_class_f1_chart(agg["per_class"], "Per-Class F1 (Aggregate)", f1_path, class_names)
         rprint(f"  Saved: {f1_path}")
 
         if len(noise_metrics) > 1:
@@ -474,13 +436,14 @@ def generate_report(
 
         # Per-noise confusion matrices
         for noise, bucket in noise_buckets.items():
-            nm = compute_metrics(bucket["true"], bucket["pred"])
+            nm = compute_metrics(bucket["true"], bucket["pred"], class_names)
             if nm["total"] > 0:
                 path = str(report_dir / f"confusion_matrix_{noise}.png")
                 save_confusion_matrix(
                     nm["confusion_matrix"],
                     f"Confusion Matrix — {noise} noise (acc={nm['accuracy']:.1%})",
                     path,
+                    class_names,
                 )
                 rprint(f"  Saved: {path}")
 
@@ -493,6 +456,7 @@ def generate_report(
     # ── Save JSON metrics ──
     json_metrics = {
         "checkpoint": checkpoint_info["path"],
+        "class_names": class_names,
         "aggregate": {
             "accuracy": agg["accuracy"],
             "macro_f1": agg["macro_f1"],
@@ -526,6 +490,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="Directory containing validation suite HDF5 files.")
     p.add_argument("--checkpoint", type=str, required=True,
                     help="Path to model checkpoint (.pt).")
+    p.add_argument("--filter-preset", type=str, default=None,
+                    choices=list(FILTER_PRESETS.keys()),
+                    help="Preprocessing filter preset (default: the checkpoint's).")
     p.add_argument("--save-plots", action="store_true",
                     help="Save confusion matrices and charts to report/ subdirectory.")
     return p
@@ -540,13 +507,17 @@ def main() -> None:
         sys.exit(1)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model, leads, epoch, val_acc = load_model(args.checkpoint, device)
+    model, leads, epoch, val_acc, class_spec, checkpoint_preset = load_model(args.checkpoint, device)
+    filter_preset = args.filter_preset or checkpoint_preset
+    pipeline = PreprocessingPipeline(FILTER_PRESETS[filter_preset])
 
     checkpoint_info = {
         "path": args.checkpoint,
         "epoch": epoch,
         "val_acc": val_acc,
         "device": str(device),
+        "class_names": list(class_spec.names),
+        "filter_preset": filter_preset,
     }
 
     # Load manifest if available (for noise level info)
@@ -570,7 +541,7 @@ def main() -> None:
     file_results = []
     for filepath in h5_files:
         noise = file_noise_map.get(filepath.name, "unknown")
-        results = process_file(filepath, model, leads, device)
+        results = process_file(filepath, model, leads, device, class_spec, pipeline)
         correct = sum(1 for r in results if r["correct"])
         total = len(results)
         acc_str = f"{correct}/{total}" if total > 0 else "0/0"

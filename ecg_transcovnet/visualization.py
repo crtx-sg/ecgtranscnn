@@ -106,6 +106,7 @@ def plot_predictions(
     probs: np.ndarray,
     true_idx: int | None = None,
     path: str | None = None,
+    class_names: list[str] | None = None,
 ):
     """Bar chart of class prediction probabilities.
 
@@ -115,7 +116,7 @@ def plot_predictions(
         path: if given, save to file; otherwise show.
     """
     num_classes = len(probs)
-    names = CLASS_NAMES[:num_classes]
+    names = list(class_names) if class_names is not None else CLASS_NAMES[:num_classes]
     colors = ["#4CAF50" if i == true_idx else "#2196F3" for i in range(num_classes)]
 
     fig, ax = plt.subplots(figsize=(12, 5))

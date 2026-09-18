@@ -2,6 +2,10 @@
 """ECG-TransCovNet Inference Processor — watches a directory for new HDF5 files,
 runs inference, and prints per-event results with aggregate classification metrics.
 
+Works with simulator and ecg_sigma HDF5 files, and with legacy 16-class and
+package-trained checkpoints (the class head and filter preset come from the
+checkpoint).
+
 Usage:
     python scripts/processor.py --watch-dir data/inference --checkpoint models/noise_robust/best_model.pt
     python scripts/processor.py --watch-dir data/inference --checkpoint models/noise_robust/best_model.pt --process-existing
@@ -14,7 +18,6 @@ import json
 import signal
 import sys
 import time
-from collections import defaultdict
 from pathlib import Path
 from queue import Queue, Empty
 
@@ -24,23 +27,28 @@ import pyinotify
 import torch
 import torch.nn.functional as F
 
-from ecg_transcovnet import (
-    ECGTransCovNet,
-    NUM_CLASSES,
-    CLASS_NAMES,
-    CONDITION_TO_IDX,
-    SIGNAL_LENGTH,
-    ALL_LEADS,
-    FILTER_PRESETS,
-    PreprocessingPipeline,
-)
+from ecg_transcovnet import FILTER_PRESETS, PreprocessingPipeline
+from ecg_transcovnet.checkpoint import load_models as load_checkpoint_models
+from ecg_transcovnet.classes import NOT_IN_HEAD, ClassSpec
+from ecg_transcovnet.hdf5_io import event_keys as list_event_keys, read_ecg_leads
 from ecg_transcovnet.mews import analyze_file, calculate_mews, correlate_ecg_vitals, assess_event_trends
 from ecg_transcovnet.report import EventResult, FileResult, extract_ids, write_report
 from ecg_transcovnet.plots import generate_plots
-from ecg_transcovnet.simulator.conditions import Condition
 
-# Reverse mapping: condition value → class index
-_CONDITION_VAL_TO_IDX = {c.value: CONDITION_TO_IDX[c] for c in Condition}
+# Ground truths are resolved by enum value (simulator files, e.g. "V") or enum
+# name (ecg_sigma files, e.g. "PVC") and mapped by name into the model head.
+_NOT_IN_HEAD_SEEN: set[str] = set()
+
+
+def _resolve_ground_truth(spec: ClassSpec, raw) -> tuple[str, int | None]:
+    name, idx = spec.resolve(raw)
+    if idx is None:
+        if name not in _NOT_IN_HEAD_SEEN:
+            _NOT_IN_HEAD_SEEN.add(name)
+            print(f"  [!] Ground truth '{name}' is not in the model head — shown as "
+                  f"{NOT_IN_HEAD} and excluded from metrics")
+        return NOT_IN_HEAD, None
+    return name, idx
 
 
 # ---------------------------------------------------------------------------
@@ -54,48 +62,34 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--watch-dir", type=str, required=True,
                     help="Directory to watch for new .h5 files.")
-    p.add_argument("--checkpoint", type=str,
+    p.add_argument("--checkpoint", type=str, nargs="+",
                     default="models/noise_robust/best_model.pt",
-                    help="Path to model checkpoint (.pt).")
+                    help="Model checkpoint(s) (.pt). Several average their softmax "
+                         "outputs as an ensemble; they must share head, leads and preset.")
     p.add_argument("--process-existing", action="store_true",
                     help="Process .h5 files already present in watch-dir on startup.")
-    p.add_argument("--filter-preset", type=str, default="none",
+    p.add_argument("--filter-preset", type=str, default=None,
                     choices=list(FILTER_PRESETS.keys()),
-                    help="Preprocessing filter preset.")
+                    help="Preprocessing filter preset (default: the checkpoint's).")
     p.add_argument("--plot-dir", type=str, default=None,
                     help="Directory for generated plots. If omitted, no plots are created.")
     return p
 
 
 # ---------------------------------------------------------------------------
-# Model loading (matches evaluate.py pattern)
+# Model loading
 # ---------------------------------------------------------------------------
 
-def load_model(checkpoint_path: str, device: torch.device):
-    ckpt_path = Path(checkpoint_path)
-    if not ckpt_path.exists():
-        print(f"Error: checkpoint not found at {ckpt_path}")
+def load_model(checkpoint_paths: str | list[str], device: torch.device):
+    """Return ``(model, leads, class_spec, filter_preset)`` for one or more checkpoints."""
+    if isinstance(checkpoint_paths, str):
+        checkpoint_paths = [checkpoint_paths]
+    try:
+        loaded = load_checkpoint_models(checkpoint_paths, device)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"Error: {exc}")
         sys.exit(1)
-
-    ckpt = torch.load(ckpt_path, weights_only=False, map_location=device)
-    saved_args = ckpt.get("args", {})
-    leads = ckpt.get("leads", ALL_LEADS)
-    in_channels = len(leads)
-
-    model = ECGTransCovNet(
-        num_classes=NUM_CLASSES,
-        in_channels=in_channels,
-        signal_length=SIGNAL_LENGTH,
-        embed_dim=saved_args.get("embed_dim", 128),
-        nhead=saved_args.get("nhead", 8),
-        num_encoder_layers=saved_args.get("num_encoder_layers", 3),
-        num_decoder_layers=saved_args.get("num_decoder_layers", 3),
-        dim_feedforward=saved_args.get("dim_feedforward", 512),
-        dropout=saved_args.get("dropout", 0.1),
-    ).to(device)
-    model.load_state_dict(ckpt["model_state_dict"])
-    model.eval()
-    return model, leads
+    return loaded.model, loaded.leads, loaded.class_spec, loaded.filter_preset
 
 
 # ---------------------------------------------------------------------------
@@ -111,11 +105,13 @@ def process_file(
     tracker: MetricsTracker,
     pipeline: PreprocessingPipeline | None = None,
     keep_signals: bool = False,
+    class_spec: ClassSpec | None = None,
 ) -> FileResult | None:
     """Parse one HDF5 file, run inference per event, and print results.
 
     Returns a FileResult for report/plot generation, or None on failure.
     """
+    spec = class_spec or ClassSpec.default()
     max_retries = 5
     hf = None
     for attempt in range(max_retries):
@@ -130,7 +126,7 @@ def process_file(
                 return None
 
     with hf:
-        event_keys = sorted(k for k in hf.keys() if k.startswith("event_"))
+        event_keys = list_event_keys(hf)
         if not event_keys:
             print(f"  [!] No events found in {filepath.name}")
             return None
@@ -138,7 +134,7 @@ def process_file(
         patient_id, alarm_id = extract_ids(filepath, hf)
         file_result = FileResult(filepath=filepath, patient_id=patient_id, alarm_id=alarm_id)
 
-        print(f"\n\u2500\u2500 {filepath.name} ({len(event_keys)} events) " + "\u2500" * max(0, 60 - len(filepath.name)))
+        print(f"\n── {filepath.name} ({len(event_keys)} events) " + "─" * max(0, 60 - len(filepath.name)))
 
         header = (
             f"  {'Event':<8s}"
@@ -163,12 +159,7 @@ def process_file(
             gt_val = grp.attrs.get("condition", None)
             if gt_val is None:
                 continue
-            if isinstance(gt_val, bytes):
-                gt_val = gt_val.decode("utf-8")
-            gt_idx = _CONDITION_VAL_TO_IDX.get(gt_val)
-            if gt_idx is None:
-                continue
-            gt_name = CLASS_NAMES[gt_idx]
+            gt_name, gt_idx = _resolve_ground_truth(spec, gt_val)
 
             # --- Read ECG leads ---
             if "ecg" not in grp:
@@ -183,13 +174,11 @@ def process_file(
                 pacer_rate = (pi >> 8) & 0xFF
                 pacer_offset = ecg_ex.get("pacer_offset", 0)
 
-            lead_arrays = []
-            for lead in leads:
-                if lead in ecg_grp:
-                    lead_arrays.append(ecg_grp[lead][:])
-                else:
-                    lead_arrays.append(np.zeros(SIGNAL_LENGTH, dtype=np.float32))
-            signal = np.stack(lead_arrays, axis=0)  # (num_leads, 2400)
+            try:
+                signal = read_ecg_leads(ecg_grp, leads)  # (num_leads, T)
+            except KeyError as exc:
+                print(f"  [!] {event_key}: {exc}")
+                continue
 
             # Preprocessing (filtering + normalization)
             if pipeline is not None:
@@ -201,18 +190,18 @@ def process_file(
             probs = F.softmax(logits, dim=-1)[0]
             pred_idx = probs.argmax().item()
             pred_prob = probs[pred_idx].item()
-            pred_name = CLASS_NAMES[pred_idx]
-            match = pred_idx == gt_idx
+            pred_name = spec.names[pred_idx]
+            match = gt_idx is not None and pred_idx == gt_idx
 
-            if match:
-                file_correct += 1
-            file_total += 1
-
-            tracker.record(gt_idx, pred_idx)
+            if gt_idx is not None:
+                if match:
+                    file_correct += 1
+                file_total += 1
+                tracker.record(gt_idx, pred_idx)
 
             # --- Read vitals ---
             vitals: dict[str, float] = {}
-            hr_str = sp_str = bp_str = rr_str = "\u2014"
+            hr_str = sp_str = bp_str = rr_str = "—"
             if "vitals" in grp:
                 vg = grp["vitals"]
                 if "HR" in vg:
@@ -246,7 +235,7 @@ def process_file(
                         if upper is not None and lower is not None:
                             vitals_thresholds[vname] = {"upper": upper, "lower": lower}
 
-            match_char = "T" if match else "F"
+            match_char = "—" if gt_idx is None else ("T" if match else "F")
             print(
                 f"  {event_id:<8s}"
                 f"{gt_name:<28s}"
@@ -289,7 +278,8 @@ def process_file(
 class MetricsTracker:
     """Accumulates ground truth / prediction pairs for aggregate reporting."""
 
-    def __init__(self) -> None:
+    def __init__(self, class_names: list[str] | tuple[str, ...] | None = None) -> None:
+        self.class_names = list(class_names) if class_names is not None else list(ClassSpec.default().names)
         self.y_true: list[int] = []
         self.y_pred: list[int] = []
 
@@ -312,14 +302,14 @@ class MetricsTracker:
         accuracy = (y_true == y_pred).mean()
 
         print()
-        print("\u2550" * 2 + " Aggregate Classification Report " + "\u2550" * 30)
+        print("═" * 2 + " Aggregate Classification Report " + "═" * 30)
         print(f"  Accuracy: {accuracy:.3f}  ({(y_true == y_pred).sum()}/{len(y_true)})")
         print()
         print(f"  {'Condition':<28s} {'Prec':>6s} {'Rec':>6s} {'F1':>6s} {'N':>5s}")
-        print("  " + "\u2500" * 53)
+        print("  " + "─" * 53)
 
         f1_scores = []
-        for idx, name in enumerate(CLASS_NAMES):
+        for idx, name in enumerate(self.class_names):
             tp = int(((y_true == idx) & (y_pred == idx)).sum())
             fp = int(((y_true != idx) & (y_pred == idx)).sum())
             fn = int(((y_true == idx) & (y_pred != idx)).sum())
@@ -373,20 +363,24 @@ def main() -> None:
     plot_dir = Path(args.plot_dir) if args.plot_dir else None
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model, leads = load_model(args.checkpoint, device)
+    model, leads, class_spec, checkpoint_preset = load_model(args.checkpoint, device)
 
-    # Preprocessing pipeline
-    pipeline = PreprocessingPipeline(FILTER_PRESETS[args.filter_preset])
+    # Preprocessing pipeline (checkpoint's preset unless overridden)
+    filter_preset = args.filter_preset or checkpoint_preset
+    pipeline = PreprocessingPipeline(FILTER_PRESETS[filter_preset])
 
     # Banner
-    ckpt_short = args.checkpoint if len(args.checkpoint) < 45 else "..." + args.checkpoint[-42:]
-    print("\u2554" + "\u2550" * 66 + "\u2557")
-    print(f"\u2551  ECG-TransCovNet Inference Processor{' ' * 29}\u2551")
-    print(f"\u2551  Watching: {str(watch_dir):<20s}  Model: {ckpt_short:<24s}\u2551")
-    print("\u255a" + "\u2550" * 66 + "\u255d")
+    ckpt_label = (args.checkpoint[0] if len(args.checkpoint) == 1
+                  else f"{len(args.checkpoint)}-model ensemble ({args.checkpoint[0]}, ...)")
+    ckpt_short = ckpt_label if len(ckpt_label) < 45 else "..." + ckpt_label[-42:]
+    print("╔" + "═" * 66 + "╗")
+    print(f"║  ECG-TransCovNet Inference Processor{' ' * 29}║")
+    print(f"║  Watching: {str(watch_dir):<20s}  Model: {ckpt_short:<24s}║")
+    print("╚" + "═" * 66 + "╝")
     print(f"  Device: {device}")
+    print(f"  Head: {len(class_spec)} classes · leads {len(leads)} · filter preset: {filter_preset}")
 
-    tracker = MetricsTracker()
+    tracker = MetricsTracker(class_spec.names)
     file_queue: Queue[Path] = Queue()
 
     # Process existing files if requested
@@ -425,6 +419,7 @@ def main() -> None:
                     file_result = process_file(
                         filepath, model, leads, device, tracker, pipeline,
                         keep_signals=plot_dir is not None,
+                        class_spec=class_spec,
                     )
 
                     # Generate report and plots

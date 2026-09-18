@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
+from typing import Sequence
 
 import numpy as np
 import torch
 import torch.nn as nn
 
-from .constants import NUM_CLASSES, CLASS_NAMES
+from .constants import CLASS_NAMES
+from .evaluation import compute_metrics
 
 
 def train_one_epoch(model, loader, loss_fn, optimizer, device, scaler):
@@ -41,57 +42,48 @@ def train_one_epoch(model, loader, loss_fn, optimizer, device, scaler):
 
 
 @torch.no_grad()
-def validate(model, loader, loss_fn, device):
+def validate(model, loader, loss_fn, device, return_predictions: bool = False):
+    """Validation loss and accuracy; optionally also ``(labels, predictions)``."""
     model.eval()
     total_loss, correct, total = 0.0, 0, 0
+    labels, preds = [], []
     for X, y in loader:
         X, y = X.to(device, non_blocking=True), y.to(device, non_blocking=True)
         logits = model(X)
         loss = loss_fn(logits, y)
         total_loss += loss.item() * X.size(0)
-        correct += (logits.argmax(1) == y).sum().item()
+        pred = logits.argmax(1)
+        correct += (pred == y).sum().item()
         total += y.size(0)
+        if return_predictions:
+            labels.append(y.cpu().numpy())
+            preds.append(pred.cpu().numpy())
+    if return_predictions:
+        return total_loss / total, correct / total, np.concatenate(labels), np.concatenate(preds)
     return total_loss / total, correct / total
 
 
 @torch.no_grad()
-def evaluate_detailed(model, loader, device):
-    """Per-class precision / recall / specificity / F1 + confusion matrix."""
+def predict(model, loader, device) -> tuple[np.ndarray, np.ndarray]:
+    """Logits and labels over a loader, in loader order."""
     model.eval()
-    all_preds, all_labels = [], []
+    logits, labels = [], []
     for X, y in loader:
-        X = X.to(device, non_blocking=True)
-        preds = model(X).argmax(1).cpu().numpy()
-        all_preds.extend(preds)
-        all_labels.extend(y.numpy())
+        logits.append(model(X.to(device, non_blocking=True)).float().cpu().numpy())
+        labels.append(y.numpy())
+    return np.concatenate(logits), np.concatenate(labels)
 
-    all_preds = np.array(all_preds)
-    all_labels = np.array(all_labels)
 
-    macro = defaultdict(float)
-    per_class = {}
-    for i in range(NUM_CLASSES):
-        tp = int(((all_preds == i) & (all_labels == i)).sum())
-        fp = int(((all_preds == i) & (all_labels != i)).sum())
-        fn = int(((all_preds != i) & (all_labels == i)).sum())
-        tn = int(((all_preds != i) & (all_labels != i)).sum())
+@torch.no_grad()
+def evaluate_detailed(model, loader, device, class_names: Sequence[str] | None = None):
+    """Per-class precision / recall / specificity / F1 + confusion matrix.
 
-        prec = tp / (tp + fp) if tp + fp else 0.0
-        rec = tp / (tp + fn) if tp + fn else 0.0
-        spec = tn / (tn + fp) if tn + fp else 0.0
-        f1 = 2 * prec * rec / (prec + rec) if prec + rec else 0.0
-
-        per_class[CLASS_NAMES[i]] = dict(
-            precision=prec, recall=rec, specificity=spec, f1=f1, support=tp + fn,
-        )
-        for k, v in [("precision", prec), ("recall", rec), ("specificity", spec), ("f1", f1)]:
-            macro[k] += v
-
-    macro = {k: v / NUM_CLASSES for k, v in macro.items()}
-    macro["accuracy"] = float((all_preds == all_labels).mean())
-
-    cm = np.zeros((NUM_CLASSES, NUM_CLASSES), dtype=int)
-    for t, p in zip(all_labels, all_preds):
-        cm[t, p] += 1
-
-    return dict(macro), per_class, cm
+    The confusion matrix is sized to *class_names* (default: the 16-class
+    simulator head).  Macro averages use classes present in the data.
+    """
+    names = list(class_names) if class_names is not None else CLASS_NAMES
+    logits, labels = predict(model, loader, device)
+    m = compute_metrics(labels, logits.argmax(1), names)
+    macro = dict(m["macro"])
+    per_class = {n: dict(m["per_class"][n]) for n in names}
+    return macro, per_class, np.asarray(m["confusion_matrix"])

@@ -193,16 +193,16 @@ class PreprocessingPipeline:
         return medfilt(lead, kernel_size=kernel).astype(lead.dtype)
 
     @staticmethod
-    def _apply_sos(lead: np.ndarray, sos: np.ndarray) -> np.ndarray:
+    def _apply_sos(signal: np.ndarray, sos: np.ndarray) -> np.ndarray:
         from scipy.signal import sosfiltfilt
 
-        return sosfiltfilt(sos, lead).astype(lead.dtype)
+        return sosfiltfilt(sos, signal, axis=-1).astype(signal.dtype)
 
     @staticmethod
-    def _apply_ba(lead: np.ndarray, b: np.ndarray, a: np.ndarray) -> np.ndarray:
+    def _apply_ba(signal: np.ndarray, b: np.ndarray, a: np.ndarray) -> np.ndarray:
         from scipy.signal import filtfilt
 
-        return filtfilt(b, a, lead).astype(lead.dtype)
+        return filtfilt(b, a, signal, axis=-1).astype(signal.dtype)
 
     @staticmethod
     def _normalize_lead(lead: np.ndarray) -> np.ndarray:
@@ -212,10 +212,22 @@ class PreprocessingPipeline:
             return (lead - mu) / std
         return lead - mu
 
+    @staticmethod
+    def _normalize_leads(signal: np.ndarray) -> np.ndarray:
+        """Per-lead z-score over the last axis (same rule as ``_normalize_lead``)."""
+        mu = signal.mean(axis=-1, keepdims=True)
+        std = signal.std(axis=-1, keepdims=True)
+        centred = signal - mu
+        ok = std > 1e-6
+        return np.where(ok, centred / np.where(ok, std, 1.0), centred)
+
     # -- public interface --------------------------------------------------
 
     def __call__(self, signal: np.ndarray) -> np.ndarray:
         """Apply the full preprocessing pipeline.
+
+        Filters run over all leads at once (``axis=-1``), which gives the same
+        result as filtering lead by lead at a fraction of the cost.
 
         Parameters
         ----------
@@ -229,36 +241,32 @@ class PreprocessingPipeline:
         """
         signal = signal.astype(np.float64, copy=True)
 
-        for ch in range(signal.shape[0]):
-            lead = signal[ch]
+        # 1. Spike removal (median filter, per lead)
+        if self.config.median_enabled:
+            for ch in range(signal.shape[0]):
+                signal[ch] = self._apply_median(signal[ch], self.config.median_kernel)
 
-            # 1. Spike removal (median filter)
-            if self.config.median_enabled:
-                lead = self._apply_median(lead, self.config.median_kernel)
+        # 2. Baseline wander removal (high-pass)
+        if self._hp_sos is not None:
+            signal = self._apply_sos(signal, self._hp_sos)
 
-            # 2. Baseline wander removal (high-pass)
-            if self._hp_sos is not None:
-                lead = self._apply_sos(lead, self._hp_sos)
+        # 3. Powerline 50 Hz notch
+        if self._notch50_ba is not None:
+            b, a = self._notch50_ba
+            signal = self._apply_ba(signal, b, a)
 
-            # 3. Powerline 50 Hz notch
-            if self._notch50_ba is not None:
-                b, a = self._notch50_ba
-                lead = self._apply_ba(lead, b, a)
+        # 4. Powerline 60 Hz notch
+        if self._notch60_ba is not None:
+            b, a = self._notch60_ba
+            signal = self._apply_ba(signal, b, a)
 
-            # 4. Powerline 60 Hz notch
-            if self._notch60_ba is not None:
-                b, a = self._notch60_ba
-                lead = self._apply_ba(lead, b, a)
+        # 5. High-frequency noise removal (low-pass)
+        if self._lp_sos is not None:
+            signal = self._apply_sos(signal, self._lp_sos)
 
-            # 5. High-frequency noise removal (low-pass)
-            if self._lp_sos is not None:
-                lead = self._apply_sos(lead, self._lp_sos)
-
-            # 6. Per-lead z-score normalization
-            if self.config.normalize:
-                lead = self._normalize_lead(lead)
-
-            signal[ch] = lead
+        # 6. Per-lead z-score normalization
+        if self.config.normalize:
+            signal = self._normalize_leads(signal)
 
         return signal.astype(np.float32)
 

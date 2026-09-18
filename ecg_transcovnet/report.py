@@ -10,6 +10,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
+from .hdf5_io import read_metadata_field
 from .mews import MEWSResult, TrendAssessment, ClinicalSummary, compute_mews_history, assess_mews_trend
 
 
@@ -49,12 +50,8 @@ def extract_ids(filepath: Path, hf: h5py.File) -> tuple[str, str]:
     Returns:
         (patient_id, alarm_id)
     """
-    patient_id = "unknown"
-    if "metadata" in hf and "patient_id" in hf["metadata"]:
-        pid = hf["metadata"]["patient_id"][()]
-        if isinstance(pid, bytes):
-            pid = pid.decode("utf-8")
-        patient_id = str(pid)
+    pid = read_metadata_field(hf, "patient_id")
+    patient_id = "unknown" if pid is None else str(pid)
 
     # alarm_id from filename: <patient>_<alarm>.h5
     stem = filepath.stem

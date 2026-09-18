@@ -16,16 +16,10 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from ecg_transcovnet import (
-    ECGTransCovNet,
-    NUM_CLASSES,
-    CLASS_NAMES,
-    SIGNAL_LENGTH,
-    ALL_LEADS,
-)
+from ecg_transcovnet import ALL_LEADS
+from ecg_transcovnet.checkpoint import load_model
 from ecg_transcovnet.simulator import ECGSimulator
 from ecg_transcovnet.simulator.conditions import Condition, CONDITION_REGISTRY
-from ecg_transcovnet.constants import CONDITION_TO_IDX
 from ecg_transcovnet.visualization import (
     plot_ecg_waveform,
     plot_predictions,
@@ -51,32 +45,15 @@ def cmd_signal(args):
 
 
 def _load_model(checkpoint_path: str, device: torch.device):
-    """Load model from checkpoint."""
-    ckpt = torch.load(checkpoint_path, weights_only=False, map_location=device)
-    saved_args = ckpt.get("args", {})
-    leads = ckpt.get("leads", ALL_LEADS)
-    in_channels = len(leads)
-
-    model = ECGTransCovNet(
-        num_classes=NUM_CLASSES,
-        in_channels=in_channels,
-        signal_length=SIGNAL_LENGTH,
-        embed_dim=saved_args.get("embed_dim", 128),
-        nhead=saved_args.get("nhead", 8),
-        num_encoder_layers=saved_args.get("num_encoder_layers", 3),
-        num_decoder_layers=saved_args.get("num_decoder_layers", 3),
-        dim_feedforward=saved_args.get("dim_feedforward", 512),
-        dropout=saved_args.get("dropout", 0.1),
-    ).to(device)
-    model.load_state_dict(ckpt["model_state_dict"])
-    model.eval()
-    return model, leads
+    """Load model, leads and class head from a checkpoint."""
+    loaded = load_model(checkpoint_path, device)
+    return loaded.model, loaded.leads, loaded.class_spec
 
 
 def cmd_predict(args):
     """Generate a signal, run prediction, and plot probabilities."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model, leads = _load_model(args.checkpoint, device)
+    model, leads, spec = _load_model(args.checkpoint, device)
 
     condition = Condition[args.condition]
     sim = ECGSimulator(seed=args.seed)
@@ -93,21 +70,21 @@ def cmd_predict(args):
         logits = model(x)
         probs = F.softmax(logits, dim=-1)[0].cpu().numpy()
 
-    true_idx = CONDITION_TO_IDX[condition]
+    true_idx = spec.get_index(condition.name)
     pred_idx = probs.argmax()
 
-    print(f"True: {CLASS_NAMES[true_idx]}")
-    print(f"Predicted: {CLASS_NAMES[pred_idx]} (confidence: {probs[pred_idx]:.3f})")
+    print(f"True: {condition.name}" + ("" if true_idx is not None else " (not in model head)"))
+    print(f"Predicted: {spec.names[pred_idx]} (confidence: {probs[pred_idx]:.3f})")
 
     output = args.output or f"predict_{args.condition.lower()}.png"
-    plot_predictions(probs, true_idx=true_idx, path=output)
+    plot_predictions(probs, true_idx=true_idx, path=output, class_names=list(spec.names))
     print(f"Saved prediction plot to {output}")
 
 
 def cmd_attention(args):
     """Generate a signal, run inference, and plot attention map."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model, leads = _load_model(args.checkpoint, device)
+    model, leads, spec = _load_model(args.checkpoint, device)
 
     condition = Condition[args.condition]
     sim = ECGSimulator(seed=args.seed)

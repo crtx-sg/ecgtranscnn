@@ -7,6 +7,7 @@ import importlib.util
 from pathlib import Path
 
 import h5py
+import numpy as np
 import pytest
 import torch
 
@@ -95,6 +96,40 @@ def test_processor_simulator_file_with_package_head(sim_file):
     assert tracker.total == 2
 
 
+def test_processor_flags_missing_leads_and_skips_other_rates(sim_file, tmp_path, capsys):
+    spec = ClassSpec.default()
+    partial = tmp_path / "PT1234_2026-09.h5"
+    partial.write_bytes(sim_file.read_bytes())
+    with h5py.File(partial, "r+") as hf:
+        del hf["event_1001/ecg/ECG1"]
+    result = processor.process_file(partial, _model(spec), LEADS, CPU,
+                                    processor.MetricsTracker(), class_spec=spec)
+    assert result.events[0].missing_leads == ["ECG1"]
+    assert result.events[1].missing_leads == []
+    assert "ECG1 missing" in capsys.readouterr().out
+
+    with h5py.File(partial, "r+") as hf:
+        del hf["metadata/sampling_rate_ecg"]
+        hf["metadata/sampling_rate_ecg"] = 250.0
+    assert processor.process_file(partial, _model(spec), LEADS, CPU,
+                                  processor.MetricsTracker(), class_spec=spec) is None
+
+
+def test_poll_waits_for_a_stable_file(tmp_path):
+    seen, pending = set(), {}
+    f = tmp_path / "a.h5"
+    f.write_bytes(b"x")
+    (tmp_path / "notes.md").write_text("ignored")
+    assert processor.poll_ready_files(tmp_path, seen, pending) == []   # first sighting
+    assert processor.poll_ready_files(tmp_path, seen, pending) == [f]  # unchanged since
+    assert processor.poll_ready_files(tmp_path, seen, pending) == []   # never twice
+    g = tmp_path / "b.h5"
+    g.write_bytes(b"x")
+    processor.poll_ready_files(tmp_path, seen, pending)
+    g.write_bytes(b"xy")  # still growing
+    assert processor.poll_ready_files(tmp_path, seen, pending) == []
+
+
 def test_validation_suite_process_file(sigma_file, sim_file):
     spec = ClassSpec.from_names(CLASSES)
     results = validation_suite.process_file(sigma_file, _model(spec), LEADS, CPU, spec)
@@ -103,7 +138,7 @@ def test_validation_suite_process_file(sigma_file, sim_file):
     assert [r["gt_name"] for r in legacy] == ["PVC", "ST_ELEVATION", "NORMAL_SINUS"]
     metrics = validation_suite.compute_metrics([r["gt_idx"] for r in results],
                                                [r["pred_idx"] for r in results], CLASSES)
-    assert metrics["confusion_matrix"].shape == (4, 4)
+    assert np.asarray(metrics["confusion_matrix"]).shape == (4, 4)
 
 
 @pytest.mark.skipif(not LEGACY_CKPT.exists(), reason="legacy checkpoint not available")

@@ -25,6 +25,7 @@ from torch.utils.data import Dataset, Sampler
 
 from . import augment
 from .classes import ClassSpec
+from .constants import SAMPLE_RATE_HZ
 from .preprocessing import FILTER_PRESETS, FilterConfig, PreprocessingPipeline
 
 FORMAT = "ecgpkg"
@@ -170,6 +171,12 @@ def load_package(root: str | Path, verify_checksums: bool = False) -> Package:
             f"ecg_transcovnet.augment reproduces version {FABRICATION_RULES_VERSION!r}; "
             f"the lead-fabrication port is stale - re-verify it against ecg_sigma's "
             f"LeadMapper before training"
+        )
+
+    fs = float(meta.get("sampling_rate_hz", SAMPLE_RATE_HZ))
+    if fs != SAMPLE_RATE_HZ:
+        raise PackageFormatError(
+            f"{root}: sampling_rate_hz {fs:g} but this code assumes {SAMPLE_RATE_HZ:g} Hz"
         )
 
     manifest = root / "manifest.csv"
@@ -320,7 +327,7 @@ def build_cache(
 
     paths.data.parent.mkdir(parents=True, exist_ok=True)
     shape = (len(rows), len(leads), MAX_SAMPLES)
-    partial = paths.data.with_name(paths.data.stem + ".partial.npy")
+    partial = paths.data.with_name(f"{paths.data.stem}.partial-{os.getpid()}.npy")
     mm = np.lib.format.open_memmap(partial, mode="w+", dtype=np.float32, shape=shape)
     del mm
 
@@ -336,17 +343,22 @@ def build_cache(
     if verbose:
         print(f"Building cache {paths.data.name}: {len(rows)} events from {len(files)} files "
               f"({workers} worker(s))")
-    if workers <= 1:
-        written = sum(_write_file_group((str(partial), shape, str(pkg.root), leads, [g])) for g in files)
-    else:
-        per_task = max(1, math.ceil(len(files) / (workers * 8)))
-        tasks = [(str(partial), shape, str(pkg.root), leads, files[k : k + per_task])
-                 for k in range(0, len(files), per_task)]
-        method = "spawn" if torch.cuda.is_initialized() else "fork"
-        with ProcessPoolExecutor(max_workers=workers, mp_context=get_context(method)) as ex:
-            written = sum(ex.map(_write_file_group, tasks))
-    if written != len(rows):
-        raise RuntimeError(f"cache build wrote {written} of {len(rows)} events")
+    try:
+        if workers <= 1:
+            written = sum(_write_file_group((str(partial), shape, str(pkg.root), leads, [g]))
+                          for g in files)
+        else:
+            per_task = max(1, math.ceil(len(files) / (workers * 8)))
+            tasks = [(str(partial), shape, str(pkg.root), leads, files[k : k + per_task])
+                     for k in range(0, len(files), per_task)]
+            method = "spawn" if torch.cuda.is_initialized() else "fork"
+            with ProcessPoolExecutor(max_workers=workers, mp_context=get_context(method)) as ex:
+                written = sum(ex.map(_write_file_group, tasks))
+        if written != len(rows):
+            raise RuntimeError(f"cache build wrote {written} of {len(rows)} events")
+    except BaseException:
+        partial.unlink(missing_ok=True)  # per-process name: nothing else would remove it
+        raise
 
     os.replace(partial, paths.data)
     np.save(paths.lengths, np.array([r["n_samples"] for r in rows], dtype=np.int32))

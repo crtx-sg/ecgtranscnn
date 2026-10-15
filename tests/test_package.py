@@ -108,6 +108,15 @@ def test_stale_fabrication_rules_rejected(pkg_root, tmp_path):
         load_package(root)
 
 
+def test_other_sampling_rate_rejected(pkg_root, tmp_path):
+    root = _copy(pkg_root, tmp_path)
+    meta = json.loads((root / "package.json").read_text())
+    meta["sampling_rate_hz"] = 250
+    (root / "package.json").write_text(json.dumps(meta))
+    with pytest.raises(PackageFormatError, match="sampling_rate_hz"):
+        load_package(root)
+
+
 def test_matching_fabrication_rules_accepted(pkg_root, tmp_path):
     root = _copy(pkg_root, tmp_path)
     meta = json.loads((root / "package.json").read_text())

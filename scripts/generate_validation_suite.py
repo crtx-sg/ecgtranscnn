@@ -20,9 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import sys
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass
 from pathlib import Path
 
 from ecg_transcovnet.simulator import ECGSimulator, HDF5EventWriter
@@ -171,13 +169,13 @@ def build_test_suite(num_files: int, events_per_file: int) -> list[TestCase]:
     # ── Category 5: Mixed realistic scenarios ──
     suite.append(TestCase(
         name="mixed_realistic_low",
-        description="Random mix of all conditions — low noise (realistic ward monitor)",
+        description="All 16 conditions in turn — low noise (realistic ward monitor)",
         conditions=[(c, None) for c in Condition],
         noise_level="low",
     ))
     suite.append(TestCase(
         name="mixed_realistic_high",
-        description="Random mix of all conditions — high noise (ambulance/transport)",
+        description="All 16 conditions in turn — high noise (ambulance/transport)",
         conditions=[(c, None) for c in Condition],
         noise_level="high",
     ))
@@ -199,11 +197,11 @@ def build_test_suite(num_files: int, events_per_file: int) -> list[TestCase]:
             ))
             extra_idx += 1
 
-    # Apply default events_per_file to cases that don't override
+    # Apply default events_per_file to cases that don't override; never fewer events
+    # than listed conditions, or the tail of the list would never be generated.
     for tc in suite:
         if tc.events_per_file == 0:
-            # Use the specified count, but cap conditions list
-            tc.events_per_file = events_per_file
+            tc.events_per_file = max(events_per_file, len(tc.conditions))
 
     return suite
 
@@ -283,7 +281,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output directory for HDF5 files and manifest.",
     )
     p.add_argument(
-        "--num-files", type=int, default=10,
+        "--num-files", type=int, default=13,  # the 13 built-in cases; fewer drops cases
         help="Number of HDF5 test files to generate.",
     )
     p.add_argument(

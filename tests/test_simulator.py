@@ -86,3 +86,47 @@ class TestECGSimulator:
         assert len(event.ecg_signals) == 7
         assert event.ppg_signal is not None
         assert event.resp_signal is not None
+
+
+def _beats(monkeypatch, condition, seed=0):
+    """(p_times, qrs_times) that generate_single_lead draws for *condition*."""
+    from ecg_transcovnet.simulator import morphology
+
+    p_times, qrs_times = [], []
+    real_p, real_qrs = morphology.create_p_wave, morphology.create_qrs_complex
+    monkeypatch.setattr(morphology, "create_p_wave",
+                        lambda t, c, *a, **k: p_times.append(c) or real_p(t, c, *a, **k))
+    monkeypatch.setattr(morphology, "create_qrs_complex",
+                        lambda t, c, *a, **k: qrs_times.append(c) or real_qrs(t, c, *a, **k))
+    rng = np.random.default_rng(seed)
+    params = morphology.generate_patient_params(rng)
+    time = np.arange(2400) / 200.0
+    morphology.generate_single_lead(time, CONDITION_REGISTRY[condition], params, 60.0, 1.0, rng)
+    return np.array(p_times), np.array(qrs_times)
+
+
+@pytest.mark.parametrize("condition", [Condition.AV_BLOCK_2_TYPE1, Condition.AV_BLOCK_2_TYPE2])
+def test_second_degree_block_drops_beats(monkeypatch, condition):
+    p, qrs = _beats(monkeypatch, condition)
+    assert len(qrs) < len(p)  # some P waves are not conducted
+    # PR of each conducted beat: the QRS follows its own P wave
+    pr = np.array([q - p[p <= q].max() for q in qrs])
+    groups = np.split(pr, np.flatnonzero(np.diff(qrs) > 1.5 * np.median(np.diff(qrs))) + 1)
+    assert len(groups) >= 3
+    for g in groups[:-1]:
+        if condition is Condition.AV_BLOCK_2_TYPE1:
+            assert np.all(np.diff(g) > 0)  # Wenckebach: PR lengthens until the drop
+        else:
+            assert np.allclose(g, g[0])     # Mobitz II: constant PR
+
+
+def test_wide_qrs_conditions_use_their_qrs_range():
+    for condition in (Condition.LBBB, Condition.NORMAL_SINUS):
+        sim = ECGSimulator(seed=0)
+        captured = {}
+        orig = sim._generate_lead
+        sim._generate_lead = lambda c, cfg, patient, hr, scale: (
+            captured.setdefault("qrs", patient.qrs_duration), orig(c, cfg, patient, hr, scale))[1]
+        sim.generate_ecg(condition, noise_level="clean")
+        lo, hi = CONDITION_REGISTRY[condition].qrs_duration_range
+        assert lo <= captured["qrs"] <= hi

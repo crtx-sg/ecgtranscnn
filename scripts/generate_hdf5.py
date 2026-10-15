@@ -106,9 +106,12 @@ def main() -> None:
         print(f"  [{i + 1}/{args.num_events}] {event.condition.name}  HR={event.hr:.1f}")
 
     # Determine output path
-    patient_id = args.patient_id or f"PT{sim._rng.integers(1000, 9999)}"
     date_str = datetime.now().strftime("%Y-%m")
+    patient_id = args.patient_id or f"PT{sim._rng.integers(1000, 9999)}"
     output_path = Path(args.output_dir) / f"{patient_id}_{date_str}.h5"
+    while not args.patient_id and output_path.exists():  # random id: redraw, never overwrite
+        patient_id = f"PT{sim._rng.integers(1000, 9999)}"
+        output_path = Path(args.output_dir) / f"{patient_id}_{date_str}.h5"
 
     writer.write_file(str(output_path), events, patient_id=patient_id)
     print(f"\nWrote {len(events)} events to {output_path}")

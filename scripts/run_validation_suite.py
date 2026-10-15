@@ -38,6 +38,7 @@ import matplotlib.pyplot as plt
 from ecg_transcovnet import FILTER_PRESETS, PreprocessingPipeline
 from ecg_transcovnet.checkpoint import load_model as load_checkpoint_model
 from ecg_transcovnet.classes import ClassSpec
+from ecg_transcovnet.evaluation import compute_metrics as _compute_metrics, save_confusion_png
 from ecg_transcovnet.hdf5_io import event_keys as list_event_keys, read_ecg_leads
 
 # Conditions are resolved by enum value (simulator, e.g. "V") or name
@@ -131,75 +132,10 @@ def process_file(
 # ── Metrics computation ───────────────────────────────────────────────────────
 
 def compute_metrics(y_true: list[int], y_pred: list[int], class_names: list[str]) -> dict:
-    """Compute accuracy, per-class precision/recall/F1, macro F1, confusion matrix."""
-    y_true = np.array(y_true)
-    y_pred = np.array(y_pred)
-    n_classes = len(class_names)
-
-    accuracy = float((y_true == y_pred).mean()) if len(y_true) > 0 else 0.0
-
-    per_class = {}
-    f1_scores = []
-    for idx in range(n_classes):
-        tp = int(((y_true == idx) & (y_pred == idx)).sum())
-        fp = int(((y_true != idx) & (y_pred == idx)).sum())
-        fn = int(((y_true == idx) & (y_pred != idx)).sum())
-        tn = int(((y_true != idx) & (y_pred != idx)).sum())
-        support = int((y_true == idx).sum())
-
-        prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-        rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        spec = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-        f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
-
-        per_class[class_names[idx]] = {
-            "precision": prec, "recall": rec, "specificity": spec,
-            "f1": f1, "support": support,
-        }
-        if support > 0:
-            f1_scores.append(f1)
-
-    macro_f1 = float(np.mean(f1_scores)) if f1_scores else 0.0
-
-    # Confusion matrix
-    cm = np.zeros((n_classes, n_classes), dtype=int)
-    for t, p in zip(y_true, y_pred):
-        cm[t, p] += 1
-
-    return {
-        "accuracy": accuracy,
-        "macro_f1": macro_f1,
-        "per_class": per_class,
-        "confusion_matrix": cm,
-        "total": len(y_true),
-        "correct": int((y_true == y_pred).sum()),
-    }
-
-
-# ── Visualization ─────────────────────────────────────────────────────────────
-
-def save_confusion_matrix(cm: np.ndarray, title: str, path: str, class_names: list[str]):
-    fig, ax = plt.subplots(figsize=(14, 12))
-    im = ax.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
-    ax.figure.colorbar(im, ax=ax)
-    ax.set(
-        xticks=range(cm.shape[1]), yticks=range(cm.shape[0]),
-        xticklabels=class_names, yticklabels=class_names,
-        title=title, ylabel="True", xlabel="Predicted",
-    )
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", fontsize=7)
-    plt.setp(ax.get_yticklabels(), fontsize=7)
-    thresh = cm.max() / 2.0
-    for i in range(cm.shape[0]):
-        for j in range(cm.shape[1]):
-            if cm[i, j] > 0:
-                ax.text(
-                    j, i, str(cm[i, j]), ha="center", va="center",
-                    color="white" if cm[i, j] > thresh else "black", fontsize=6,
-                )
-    fig.tight_layout()
-    plt.savefig(path, dpi=150)
-    plt.close()
+    """:func:`evaluation.compute_metrics` plus the totals this report prints."""
+    m = _compute_metrics(y_true, y_pred, class_names)
+    return {**m, "macro_f1": m["macro"]["f1"], "total": m["n"],
+            "correct": int(np.sum(np.asarray(y_true) == np.asarray(y_pred)))}
 
 
 def save_noise_comparison_chart(noise_metrics: dict[str, dict], path: str):
@@ -384,8 +320,10 @@ def generate_report(
         rprint(f"  Events (N/1AVB/2AVB1/2AVB2 only): {len(av_true)}")
         rprint(f"  Accuracy: {av_metrics['accuracy']:.4f} ({av_metrics['accuracy'] * 100:.1f}%)")
         rprint()
+        # Per-class rows come from all events: false positives from other true classes
+        # must count against precision.
         for name in ["NORMAL_SINUS", "AV_BLOCK_1", "AV_BLOCK_2_TYPE1", "AV_BLOCK_2_TYPE2"]:
-            m = av_metrics["per_class"].get(name)
+            m = agg["per_class"].get(name)
             if m and m["support"] > 0:
                 rprint(
                     f"  {name:<28s} Prec={m['precision']:.3f}  "
@@ -422,7 +360,7 @@ def generate_report(
         print_section("Saving Visual Reports", "-")
 
         cm_path = str(report_dir / "confusion_matrix_aggregate.png")
-        save_confusion_matrix(agg["confusion_matrix"], "Aggregate Confusion Matrix", cm_path, class_names)
+        save_confusion_png(agg["confusion_matrix"], class_names, cm_path, "Aggregate Confusion Matrix")
         rprint(f"  Saved: {cm_path}")
 
         f1_path = str(report_dir / "per_class_f1_aggregate.png")
@@ -439,12 +377,8 @@ def generate_report(
             nm = compute_metrics(bucket["true"], bucket["pred"], class_names)
             if nm["total"] > 0:
                 path = str(report_dir / f"confusion_matrix_{noise}.png")
-                save_confusion_matrix(
-                    nm["confusion_matrix"],
-                    f"Confusion Matrix — {noise} noise (acc={nm['accuracy']:.1%})",
-                    path,
-                    class_names,
-                )
+                save_confusion_png(nm["confusion_matrix"], class_names, path,
+                                   f"Confusion Matrix — {noise} noise (acc={nm['accuracy']:.1%})")
                 rprint(f"  Saved: {path}")
 
     # ── Save text report ──
@@ -527,7 +461,9 @@ def main() -> None:
         with open(manifest_path) as f:
             manifest = json.load(f)
         for fi in manifest.get("files", []):
-            file_noise_map[fi["filename"]] = fi.get("noise_level", "unknown")
+            levels = list(fi.get("noise_levels", {}))
+            noise = fi.get("noise_level") or (levels[0] if len(levels) == 1 else "mixed")
+            file_noise_map[fi.get("filename") or fi["file"]] = noise
 
     # Find and process all HDF5 files
     h5_files = sorted(suite_dir.glob("*.h5"))

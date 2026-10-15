@@ -19,19 +19,20 @@ import signal
 import sys
 import time
 from pathlib import Path
-from queue import Queue, Empty
 
 import h5py
 import numpy as np
-import pyinotify
 import torch
 import torch.nn.functional as F
 
 from ecg_transcovnet import FILTER_PRESETS, PreprocessingPipeline
 from ecg_transcovnet.checkpoint import load_models as load_checkpoint_models
 from ecg_transcovnet.classes import NOT_IN_HEAD, ClassSpec
-from ecg_transcovnet.hdf5_io import event_keys as list_event_keys, read_ecg_leads
-from ecg_transcovnet.mews import analyze_file, calculate_mews, correlate_ecg_vitals, assess_event_trends
+from ecg_transcovnet.constants import SAMPLE_RATE_HZ
+from ecg_transcovnet.evaluation import compute_metrics
+from ecg_transcovnet.hdf5_io import (event_keys as list_event_keys, missing_leads,
+                                     read_ecg_leads, read_metadata_field)
+from ecg_transcovnet.mews import analyze_file, correlate_ecg_vitals, assess_event_trends
 from ecg_transcovnet.report import EventResult, FileResult, extract_ids, write_report
 from ecg_transcovnet.plots import generate_plots
 
@@ -63,7 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--watch-dir", type=str, required=True,
                     help="Directory to watch for new .h5 files.")
     p.add_argument("--checkpoint", type=str, nargs="+",
-                    default="models/noise_robust/best_model.pt",
+                    default=["models/noise_robust/best_model.pt"],
                     help="Model checkpoint(s) (.pt). Several average their softmax "
                          "outputs as an ensemble; they must share head, leads and preset.")
     p.add_argument("--process-existing", action="store_true",
@@ -126,6 +127,11 @@ def process_file(
                 return None
 
     with hf:
+        fs = float(read_metadata_field(hf, "sampling_rate_ecg", SAMPLE_RATE_HZ))
+        if fs != SAMPLE_RATE_HZ:
+            print(f"  [!] Skipping {filepath.name}: ECG sampled at {fs:g} Hz, "
+                  f"model expects {SAMPLE_RATE_HZ:g} Hz")
+            return None
         event_keys = list_event_keys(hf)
         if not event_keys:
             print(f"  [!] No events found in {filepath.name}")
@@ -179,6 +185,10 @@ def process_file(
             except KeyError as exc:
                 print(f"  [!] {event_key}: {exc}")
                 continue
+            absent = missing_leads(ecg_grp, leads)
+            if absent:
+                print(f"  [!] {event_key}: leads {', '.join(absent)} missing — zero-filled, "
+                      f"prediction unreliable")
 
             # Preprocessing (filtering + normalization)
             if pipeline is not None:
@@ -261,6 +271,7 @@ def process_file(
                 ecg_signal=signal.copy() if keep_signals else None,
                 vitals_history=vitals_history,
                 vitals_thresholds=vitals_thresholds,
+                missing_leads=absent,
             )
             file_result.events.append(ev_result)
 
@@ -296,63 +307,90 @@ class MetricsTracker:
             print("\nNo events processed.")
             return
 
-        y_true = np.array(self.y_true)
-        y_pred = np.array(self.y_pred)
-
-        accuracy = (y_true == y_pred).mean()
+        m = compute_metrics(self.y_true, self.y_pred, self.class_names)
 
         print()
         print("═" * 2 + " Aggregate Classification Report " + "═" * 30)
-        print(f"  Accuracy: {accuracy:.3f}  ({(y_true == y_pred).sum()}/{len(y_true)})")
+        correct = sum(t == p for t, p in zip(self.y_true, self.y_pred))
+        print(f"  Accuracy: {m['accuracy']:.3f}  ({correct}/{m['n']})")
         print()
         print(f"  {'Condition':<28s} {'Prec':>6s} {'Rec':>6s} {'F1':>6s} {'N':>5s}")
         print("  " + "─" * 53)
+        for name in m["present_classes"]:
+            c = m["per_class"][name]
+            print(f"  {name:<28s} {c['precision']:6.3f} {c['recall']:6.3f} {c['f1']:6.3f} {c['support']:5d}")
 
-        f1_scores = []
-        for idx, name in enumerate(self.class_names):
-            tp = int(((y_true == idx) & (y_pred == idx)).sum())
-            fp = int(((y_true != idx) & (y_pred == idx)).sum())
-            fn = int(((y_true == idx) & (y_pred != idx)).sum())
-            support = int((y_true == idx).sum())
-
-            prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-            rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-            f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
-
-            if support > 0:
-                f1_scores.append(f1)
-                print(f"  {name:<28s} {prec:6.3f} {rec:6.3f} {f1:6.3f} {support:5d}")
-
-        macro_f1 = np.mean(f1_scores) if f1_scores else 0.0
         print()
-        print(f"  Macro F1: {macro_f1:.3f}")
+        print(f"  Macro F1: {m['macro']['f1']:.3f}")
         print()
 
 
 # ---------------------------------------------------------------------------
-# pyinotify watcher
+# Directory watcher (polling, stdlib only)
 # ---------------------------------------------------------------------------
 
-class HDF5EventHandler(pyinotify.ProcessEvent):
-    """Enqueue new .h5 files when they finish being written."""
+def poll_ready_files(watch_dir: Path, seen: set[Path], pending: dict[Path, tuple]) -> list[Path]:
+    """New ``.h5`` files whose size and mtime did not change since the previous poll.
 
-    def __init__(self, queue: Queue) -> None:
-        super().__init__()
-        self._queue = queue
+    shortcut: a writer that pauses longer than one poll interval mid-file can be read
+    early; write to a temp name and rename into watch-dir if that ever happens.
+    """
+    ready = []
+    for path in sorted(watch_dir.glob("*.h5")):
+        if path in seen:
+            continue
+        try:
+            st = path.stat()
+        except FileNotFoundError:
+            continue
+        stamp = (st.st_size, st.st_mtime_ns)
+        if pending.get(path) == stamp:
+            pending.pop(path)
+            seen.add(path)
+            ready.append(path)
+        else:
+            pending[path] = stamp
+    return ready
 
-    def process_IN_CLOSE_WRITE(self, event: pyinotify.Event) -> None:
-        if event.pathname.endswith(".h5"):
-            self._queue.put(Path(event.pathname))
 
-    def process_IN_MOVED_TO(self, event: pyinotify.Event) -> None:
-        """Catch files that arrive via atomic rename (e.g. os.replace)."""
-        if event.pathname.endswith(".h5"):
-            self._queue.put(Path(event.pathname))
+def handle_file(filepath: Path, model, leads, device, tracker, pipeline, class_spec,
+                plot_dir: Path | None) -> None:
+    """Classify one file, then attach clinical analysis, plots and the report."""
+    file_result = process_file(
+        filepath, model, leads, device, tracker, pipeline,
+        keep_signals=plot_dir is not None, class_spec=class_spec,
+    )
+    if not (file_result and file_result.events):
+        return
+
+    # Clinical analysis (MEWS, trends, correlations)
+    event_dicts = [
+        {"condition": e.pred_name, "vitals": e.vitals, "vitals_history": e.vitals_history}
+        for e in file_result.events
+    ]
+    file_result.clinical_summary = analyze_file(event_dicts)
+    for ev, mews in zip(file_result.events, file_result.clinical_summary.mews_scores):
+        ev.mews = mews
+        ev.vitals_trends = assess_event_trends(ev.vitals_history)
+        ev.clinical_notes = correlate_ecg_vitals(ev.pred_name, ev.vitals, mews)
+
+    event_plots = None
+    if plot_dir is not None:
+        event_plots = generate_plots(file_result, plot_dir)
+        if event_plots:
+            n = sum(len(v) for v in event_plots.values())
+            print(f"  Plots: {n} saved to {plot_dir}/")
+
+    report_path = write_report(file_result, plot_dir=plot_dir, event_plots=event_plots)
+    print(f"  Report: {report_path}")
 
 
 # ---------------------------------------------------------------------------
 # Main loop
 # ---------------------------------------------------------------------------
+
+POLL_SECONDS = 0.5
+
 
 def main() -> None:
     args = build_parser().parse_args()
@@ -381,20 +419,10 @@ def main() -> None:
     print(f"  Head: {len(class_spec)} classes · leads {len(leads)} · filter preset: {filter_preset}")
 
     tracker = MetricsTracker(class_spec.names)
-    file_queue: Queue[Path] = Queue()
+    # Files already present are skipped unless --process-existing.
+    seen: set[Path] = set() if args.process_existing else set(watch_dir.glob("*.h5"))
+    pending: dict[Path, tuple] = {}
 
-    # Process existing files if requested
-    if args.process_existing:
-        for p in sorted(watch_dir.glob("*.h5")):
-            file_queue.put(p)
-
-    # Set up inotify watcher
-    wm = pyinotify.WatchManager()
-    handler = HDF5EventHandler(file_queue)
-    notifier = pyinotify.Notifier(wm, handler, timeout=500)
-    wm.add_watch(str(watch_dir), pyinotify.IN_CLOSE_WRITE | pyinotify.IN_MOVED_TO)
-
-    # Graceful shutdown on Ctrl+C
     shutdown = False
 
     def on_sigint(signum, frame):
@@ -407,62 +435,16 @@ def main() -> None:
 
     try:
         while not shutdown:
-            # Check for inotify events (non-blocking, 500ms timeout)
-            if notifier.check_events(timeout=500):
-                notifier.read_events()
-                notifier.process_events()
-
-            # Drain the queue
-            while not file_queue.empty():
-                try:
-                    filepath = file_queue.get_nowait()
-                    file_result = process_file(
-                        filepath, model, leads, device, tracker, pipeline,
-                        keep_signals=plot_dir is not None,
-                        class_spec=class_spec,
-                    )
-
-                    # Generate report and plots
-                    if file_result and file_result.events:
-                        # Clinical analysis (MEWS, trends, correlations)
-                        event_dicts = [
-                            {"condition": e.pred_name, "vitals": e.vitals,
-                             "vitals_history": e.vitals_history}
-                            for e in file_result.events
-                        ]
-                        file_result.clinical_summary = analyze_file(event_dicts)
-
-                        # Attach per-event MEWS and clinical notes
-                        for ev, mews in zip(
-                            file_result.events,
-                            file_result.clinical_summary.mews_scores,
-                        ):
-                            ev.mews = mews
-                            ev.vitals_trends = assess_event_trends(ev.vitals_history)
-                            ev.clinical_notes = correlate_ecg_vitals(
-                                ev.pred_name, ev.vitals, mews,
-                            )
-
-                        # Generate plots if requested
-                        event_plots = None
-                        if plot_dir is not None:
-                            event_plots = generate_plots(file_result, plot_dir)
-                            if event_plots:
-                                n = sum(len(v) for v in event_plots.values())
-                                print(f"  Plots: {n} saved to {plot_dir}/")
-
-                        # Write markdown report
-                        report_path = write_report(
-                            file_result, plot_dir=plot_dir, event_plots=event_plots,
-                        )
-                        print(f"  Report: {report_path}")
-
-                except Empty:
+            for filepath in poll_ready_files(watch_dir, seen, pending):
+                if shutdown:
                     break
-    except KeyboardInterrupt:
-        pass
+                try:
+                    handle_file(filepath, model, leads, device, tracker, pipeline,
+                                class_spec, plot_dir)
+                except Exception as exc:  # one bad file must not stop the watcher
+                    print(f"  [!] Failed on {filepath.name}: {type(exc).__name__}: {exc}")
+            time.sleep(POLL_SECONDS)
     finally:
-        notifier.stop()
         tracker.print_report()
 
 
@@ -476,7 +458,6 @@ if __name__ == "__main__":
 #
 # - No GPU batching: processes one event at a time. Could batch all events in
 #   a file for better throughput on GPU.
-# - pyinotify is Linux-only. For macOS support, could fall back to polling
-#   (e.g. watchdog library or a simple os.listdir loop).
-# - No retry on corrupt HDF5 files. A try/except per file is added but no
-#   re-queue or dead-letter handling.
+# - A file that fails is logged and skipped; there is no re-queue or
+#   dead-letter handling. A file rewritten in place under the same name is
+#   not processed again.

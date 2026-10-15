@@ -16,7 +16,6 @@ ECG-TransCovNet is a hybrid CNN-Transformer deep learning model for ECG arrhythm
 - SciPy 1.10+ (IIR filter design and application for ECG preprocessing; lazy-imported)
 - h5py 3.8+ (HDF5 dataset I/O)
 - matplotlib 3.7+ (visualization)
-- pyinotify 0.9.6 (Linux inotify-based file watching)
 - pytest 7.0+ (testing, dev dependency)
 
 ## Project Conventions
@@ -97,4 +96,3 @@ Four noise presets: clean, low, medium, high
 - No external APIs or cloud services required
 - Self-contained data generation via simulator
 - Pre-trained model checkpoints stored in `models/` directory
-- pyinotify requires Linux (inotify kernel feature)

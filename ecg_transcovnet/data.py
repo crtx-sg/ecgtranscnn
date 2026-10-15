@@ -13,26 +13,11 @@ from .constants import (
     NUM_CLASSES,
     CONDITION_TO_IDX,
     CLASS_NAMES,
-    SIGNAL_LENGTH,
     MIT_BIH_PROPORTIONS,
 )
 from .preprocessing import FilterConfig, PreprocessingPipeline, FILTER_PRESETS
 from .classes import canonical_condition_name
-
-
-def _pick_condition(
-    rng: np.random.Generator,
-    proportions: dict[Condition, float] | None = None,
-) -> Condition:
-    """Sample a condition according to *proportions* (uniform if None)."""
-    if proportions:
-        conditions = list(proportions.keys())
-        weights = np.array([proportions[c] for c in conditions])
-    else:
-        conditions = list(Condition)
-        weights = np.ones(len(conditions))
-    weights = weights / weights.sum()
-    return conditions[rng.choice(len(conditions), p=weights)]
+from .hdf5_io import event_keys, read_ecg_leads
 
 
 _MIXED_NOISE_LEVELS = ["clean", "low", "medium"]
@@ -70,7 +55,7 @@ def generate_dataset(
     labels = []
 
     for i in range(num_samples):
-        condition = _pick_condition(sim._rng, proportions)
+        condition = sim._pick_condition(proportions)
         if noise_level == "mixed":
             sample_noise = sim._rng.choice(_MIXED_NOISE_LEVELS)
         else:
@@ -194,7 +179,6 @@ def load_hdf5_test_samples(
         filter_config = FILTER_PRESETS["none"]
     pipeline = PreprocessingPipeline(filter_config)
 
-    lead_order = ["ECG1", "ECG2", "ECG3", "aVR", "aVL", "aVF", "vVX"]
     samples = []
 
     for h5_file in sorted(test_path.glob("*.h5")):
@@ -209,10 +193,7 @@ def load_hdf5_test_samples(
         file_class_idx = CONDITION_TO_IDX[condition] if condition is not None else None
 
         with h5py.File(h5_file, "r") as f:
-            # Each file has event_1001
-            for event_key in sorted(f.keys()):
-                if not event_key.startswith("event_"):
-                    continue
+            for event_key in event_keys(f):
                 event = f[event_key]
                 if "ecg" not in event:
                     continue
@@ -223,24 +204,10 @@ def load_hdf5_test_samples(
                         continue
                     class_idx = CONDITION_TO_IDX[Condition[name]]
 
-                ecg_group = event["ecg"]
-                # Stack leads
-                lead_arrays = []
-                for lead in leads:
-                    if lead in ecg_group:
-                        lead_arrays.append(ecg_group[lead][:])
-                    else:
-                        # Try matching from lead_order
-                        idx = lead_order.index(lead) if lead in lead_order else -1
-                        if idx >= 0 and str(idx) in ecg_group:
-                            lead_arrays.append(ecg_group[str(idx)][:])
-                        else:
-                            lead_arrays.append(np.zeros(SIGNAL_LENGTH, dtype=np.float32))
-
-                signal = np.stack(lead_arrays, axis=0)
-
-                # Preprocessing (filtering + normalization)
-                signal = pipeline(signal)
+                try:
+                    signal = pipeline(read_ecg_leads(event["ecg"], leads))
+                except KeyError:  # none of the leads present
+                    continue
 
                 samples.append((fname, signal, class_idx))
 

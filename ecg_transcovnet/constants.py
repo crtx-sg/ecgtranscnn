@@ -9,6 +9,7 @@ CONDITION_LIST = list(Condition)
 CONDITION_TO_IDX = {c: i for i, c in enumerate(CONDITION_LIST)}
 CLASS_NAMES = [c.name for c in CONDITION_LIST]
 
+SAMPLE_RATE_HZ = 200.0  # every filter, crop and model assumes this rate
 SIGNAL_LENGTH = 2400  # 12 s * 200 Hz
 ALL_LEADS = ["ECG1", "ECG2", "ECG3", "aVR", "aVL", "aVF", "vVX"]
 

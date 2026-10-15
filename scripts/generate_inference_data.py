@@ -278,11 +278,14 @@ def main() -> None:
                 )
             events.append(event)
 
-        # Build filename: PatientID_YYYY-MM.h5
-        patient_id = f"PT{sim._rng.integers(1000, 9999)}"
+        # Build filename: PatientID_YYYY-MM.h5; redraw the id rather than overwrite a file
         date_str = datetime.now().strftime("%Y-%m")
-        filename = f"{patient_id}_{date_str}.h5"
-        filepath = output_dir / filename
+        while True:
+            patient_id = f"PT{sim._rng.integers(1000, 9999)}"
+            filename = f"{patient_id}_{date_str}.h5"
+            filepath = output_dir / filename
+            if not filepath.exists():
+                break
 
         writer.write_file(str(filepath), events, patient_id=patient_id)
 

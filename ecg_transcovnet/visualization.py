@@ -33,30 +33,6 @@ def save_training_curves(history: dict, path: str):
     plt.close()
 
 
-def save_confusion_matrix(cm: np.ndarray, names: list[str], path: str):
-    """Save confusion matrix as an image."""
-    fig, ax = plt.subplots(figsize=(14, 12))
-    im = ax.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
-    ax.figure.colorbar(im, ax=ax)
-    ax.set(
-        xticks=range(cm.shape[1]), yticks=range(cm.shape[0]),
-        xticklabels=names, yticklabels=names,
-        title="Confusion Matrix", ylabel="True", xlabel="Predicted",
-    )
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", fontsize=7)
-    plt.setp(ax.get_yticklabels(), fontsize=7)
-    thresh = cm.max() / 2.0
-    for i in range(cm.shape[0]):
-        for j in range(cm.shape[1]):
-            ax.text(
-                j, i, str(cm[i, j]), ha="center", va="center",
-                color="white" if cm[i, j] > thresh else "black", fontsize=6,
-            )
-    fig.tight_layout()
-    plt.savefig(path, dpi=150)
-    plt.close()
-
-
 def plot_ecg_waveform(
     signal: np.ndarray,
     lead_names: list[str] | None = None,

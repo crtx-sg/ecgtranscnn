@@ -18,13 +18,13 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset, WeightedRandomSampler
 
@@ -45,7 +45,7 @@ from ecg_transcovnet.package import (PackageDataset, balanced_sample_weights,
                                      cv_datasets, load_package)
 from ecg_transcovnet.package_eval import EvalModel, evaluate_split
 from ecg_transcovnet.training import train_one_epoch, validate, evaluate_detailed
-from ecg_transcovnet.visualization import save_training_curves, save_confusion_matrix
+from ecg_transcovnet.visualization import save_training_curves
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -256,7 +256,7 @@ def train_sim(args):
         if vl_acc > best_val_acc:
             best_val_acc = vl_acc
             patience_ctr = 0
-            torch.save(
+            _save(
                 {
                     "epoch": epoch + 1,
                     "model_state_dict": model.state_dict(),
@@ -307,10 +307,10 @@ def train_sim(args):
 
     # ── Save outputs ──────────────────────────────────────────────────────
     save_training_curves(history, str(output_dir / "training_curves.png"))
-    save_confusion_matrix(cm, CLASS_NAMES, str(output_dir / "confusion_matrix.png"))
+    save_confusion_png(cm, CLASS_NAMES, output_dir / "confusion_matrix.png", "Confusion matrix (val)")
 
     # Final model with all metadata
-    torch.save(
+    _save(
         {
             "epoch": ckpt["epoch"],
             "model_state_dict": model.state_dict(),
@@ -335,6 +335,14 @@ def train_sim(args):
     print(f"  training_curves.png - loss and accuracy plots")
     print(f"  confusion_matrix.png - per-class confusion matrix")
     print("Done!")
+
+
+def _save(obj, path) -> None:
+    """torch.save via a temp file, so a kill mid-write never leaves a truncated checkpoint."""
+    path = Path(path)
+    tmp = path.with_name(path.name + ".tmp")
+    torch.save(obj, tmp)
+    os.replace(tmp, path)
 
 
 def _lr_lambda(args):
@@ -524,14 +532,14 @@ def train_package(args):
         marker = ""
         if metric > best_metric:
             best_metric, patience_ctr, marker = metric, 0, "  *best*"
-            torch.save({**checkpoint_payload(epoch + 1), "val_acc": vl_acc, "val_loss": vl_loss,
+            _save({**checkpoint_payload(epoch + 1), "val_acc": vl_acc, "val_loss": vl_loss,
                         "val_macro_f1": vl_f1, "best_metric": best_metric}, best_path)
         else:
             patience_ctr += 1
         if patience_ctr >= args.patience:
             completed = True
 
-        torch.save({
+        _save({
             **checkpoint_payload(epoch + 1),
             "optimizer_state_dict": optimizer.state_dict(),
             "scheduler_state_dict": scheduler.state_dict(),
@@ -568,7 +576,7 @@ def train_package(args):
     if args.cv_fold is not None:
         # A cross-validation run must not see the test split: the fold score is the
         # selection signal, and test is spent once, on the artifact we commit to.
-        torch.save(best, output_dir / "final_model.pt")
+        _save(best, output_dir / "final_model.pt")
         print(f"\n=== Fold {args.cv_fold} complete (best epoch {best['epoch']}, "
               f"held-out {args.select_metric} {best['best_metric']:.4f}) ===")
         print("Test split not evaluated: cross-validation run.")
@@ -599,7 +607,7 @@ def train_package(args):
                           sections, class_names, extra={"checkpoint": str(best_path)})
     save_confusion_png(np.asarray(sections[crop_key]["overall"]["confusion_matrix"]), class_names,
                        output_dir / "confusion_matrix.png", f"{pkg.version} test ({crop_key})")
-    torch.save({**best, "test_reports": sections}, output_dir / "final_model.pt")
+    _save({**best, "test_reports": sections}, output_dir / "final_model.pt")
     print(f"\nOutputs in {output_dir}/: best_model.pt, last.pt, final_model.pt, history.json, "
           f"training_curves.png, confusion_matrix.png, {paths['md'].relative_to(output_dir)}")
 

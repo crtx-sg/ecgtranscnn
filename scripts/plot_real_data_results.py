@@ -74,6 +74,11 @@ def _load(spec: str) -> tuple[str, dict]:
     return label, json.loads(Path(path).read_text())
 
 
+def _split_label(report: dict) -> str:
+    """'<package version> <split>' — the part of the report title before the em dash."""
+    return report.get("title", "").split(" — ")[0] or "test"
+
+
 def _crop_section(report: dict) -> dict:
     key = next(k for k in report["sections"] if k.startswith("crop"))
     return report["sections"][key]
@@ -102,10 +107,15 @@ def headline(models: list[tuple[str, dict]], path: Path) -> None:
     ax.yaxis.set_major_locator(MultipleLocator(0.25))
     _hairline_grid(ax)
     ax.legend(loc="lower left", bbox_to_anchor=(0, 1.01), ncol=3, frameon=False, fontsize=12)
-    real = _crop_section(models[-1][1])["overall"]
+    real_report = models[-1][1]
+    real = _crop_section(real_report)["overall"]
     lo, hi = real["macro_f1_ci95"]
-    _titles(fig, "Real-data training lifts accuracy from ≤26 % to 75 %",
-            f"ecg_sigma package v1 test split · {real['n']:,} events from unseen subjects · 12 classes · "
+    base = [_crop_section(rep)["overall"]["accuracy"] for _, rep in models[:-1]]
+    title = (f"Real-data training lifts accuracy from ≤{max(base):.0%} to {real['accuracy']:.0%}"
+             if base else f"Real-data model accuracy {real['accuracy']:.0%}")
+    _titles(fig, title,
+            f"ecg_sigma package {_split_label(real_report)} split · {real['n']:,} events from unseen "
+            f"subjects · {len(real_report['class_names'])} classes · "
             f"real-data macro-F1 95 % CI {lo:.2f}–{hi:.2f} (subject bootstrap)")
     fig.savefig(path, dpi=DPI)
     plt.close(fig)
@@ -183,7 +193,7 @@ def per_class(report: dict, path: Path) -> None:
     ax.legend(loc="lower left", bbox_to_anchor=(0, 1.0), ncol=3, frameon=False, fontsize=12)
     m = ov["macro"]
     _titles(fig, "Per-class sensitivity, specificity and precision",
-            f"Real-data model · v1 test · macro sensitivity {m['recall']:.2f}, specificity {m['specificity']:.2f}, "
+            f"Real-data model · {_split_label(report)} · macro sensitivity {m['recall']:.2f}, specificity {m['specificity']:.2f}, "
             f"precision {m['precision']:.2f} · ⚠ fewer than 5 test subjects (indicative)")
     fig.savefig(path, dpi=DPI)
     plt.close(fig)
@@ -213,7 +223,7 @@ def by_source(report: dict, path: Path) -> None:
                           (("1111111", "7 real leads"), ("0100001", "ECG2+V1 real"), ("0100000", "ECG2 only"))
                           if m in masks)
     _titles(fig, "Performance by source database",
-            f"Real-data model · v1 test · accuracy by measured leads: {mask_txt}")
+            f"Real-data model · {_split_label(report)} · accuracy by measured leads: {mask_txt}")
     fig.savefig(path, dpi=DPI)
     plt.close(fig)
 
@@ -270,7 +280,7 @@ def main() -> None:
 
     headline(baselines + [(real_label, real)], out / "01_headline_comparison.png")
     confusion(real, f"Confusion matrix — {real_label} (counts)",
-              f"v1 test · {ov['n']:,} events · accuracy {ov['accuracy']:.1%} · macro-F1 {ov['macro']['f1']:.2f} · "
+              f"{_split_label(real)} · {ov['n']:,} events · accuracy {ov['accuracy']:.1%} · macro-F1 {ov['macro']['f1']:.2f} · "
               "colour = share of the true class", out / "02_confusion_real_counts.png", "counts")
     confusion(real, f"Confusion matrix — {real_label} (row %)",
               "Each row sums to 100 %: the diagonal is the sensitivity of that class",
@@ -282,8 +292,9 @@ def main() -> None:
         bov = _crop_section(rep)["overall"]
         slug = label.split(":")[-1].strip().replace(" ", "_")
         confusion(rep, f"Confusion matrix — {label} (row %)",
-                  f"Simulator-trained checkpoint on real v1 test · accuracy {bov['accuracy']:.1%} · "
-                  f"macro-F1 {bov['macro']['f1']:.2f} · predictions of classes outside the 12-class head in the last column",
+                  f"Simulator-trained checkpoint on real {_split_label(rep)} · accuracy {bov['accuracy']:.1%} · "
+                  f"macro-F1 {bov['macro']['f1']:.2f} · predictions of classes outside the "
+                  f"{len(rep['class_names'])}-class head in the last column",
                   out / f"{7 + i:02d}_confusion_baseline_{slug}.png", "percent")
     for f in sorted(out.glob("*.png")):
         print(f)

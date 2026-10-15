@@ -744,7 +744,6 @@ pip install -r requirements.txt
 - SciPy >= 1.10 (signal filtering; lazy-loaded, only needed when filter preset is not `none`)
 - h5py >= 3.8
 - matplotlib >= 3.7
-- pyinotify >= 0.9.6 (Linux; for inference processor directory watching)
 
 ---
 
@@ -1458,7 +1457,7 @@ python scripts/evaluate.py --checkpoint models/noise_robust/best_model.pt --num-
 | 3 | Per-condition precision/recall to find weak spots |
 | 4 | Robustness to specific artifact types (EMG, motion) |
 | 5 | Realistic mixed-noise scenario |
-| 6 | End-to-end live pipeline with inotify directory watching |
+| 6 | End-to-end live pipeline with directory watching |
 | 7 | Compare baseline vs improved vs noise-robust models on same data |
 | 8 | Large-scale formal evaluation; filtered vs unfiltered on noisy data |
 
@@ -1623,7 +1622,7 @@ scripts/                        # CLI tools
   train.py                      # Training (simulator or ecgpkg package; resumable)
   evaluate.py                   # Evaluation: package splits, baseline mode, counterfactuals, ensembles
   compute_auc.py                # AUROC computation
-  processor.py                  # Inference processor (inotify watcher + model + plots + reports)
+  processor.py                  # Inference processor (polling watcher + model + plots + reports)
   run_validation_suite.py       # Per-condition validation suite
   generate_hdf5.py              # General HDF5 file generation (--verify-history)
   generate_inference_data.py    # Inference data generator (conditions, noise, delay)
@@ -1668,7 +1667,6 @@ notebooks/                      # Educational Colab notebook
 - SciPy >= 1.10
 - h5py >= 3.8
 - matplotlib >= 3.7
-- pyinotify >= 0.9.6 (Linux only; for inference processor)
 
 ```bash
 pip install -r requirements.txt

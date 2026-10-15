@@ -10,13 +10,12 @@ Usage:
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 
-from ecg_transcovnet import ALL_LEADS
+from ecg_transcovnet import ALL_LEADS, FILTER_PRESETS, PreprocessingPipeline
 from ecg_transcovnet.checkpoint import load_model
 from ecg_transcovnet.simulator import ECGSimulator
 from ecg_transcovnet.simulator.conditions import Condition, CONDITION_REGISTRY
@@ -45,25 +44,22 @@ def cmd_signal(args):
 
 
 def _load_model(checkpoint_path: str, device: torch.device):
-    """Load model, leads and class head from a checkpoint."""
+    """Load model, leads, class head and the checkpoint's preprocessing."""
     loaded = load_model(checkpoint_path, device)
-    return loaded.model, loaded.leads, loaded.class_spec
+    pipeline = PreprocessingPipeline(FILTER_PRESETS[loaded.filter_preset])
+    return loaded.model, loaded.leads, loaded.class_spec, pipeline
 
 
 def cmd_predict(args):
     """Generate a signal, run prediction, and plot probabilities."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model, leads, spec = _load_model(args.checkpoint, device)
+    model, leads, spec, pipeline = _load_model(args.checkpoint, device)
 
     condition = Condition[args.condition]
     sim = ECGSimulator(seed=args.seed)
     ecg = sim.generate_ecg(condition, noise_level=args.noise_level)
 
-    signal = np.stack([ecg[lead] for lead in leads], axis=0)
-    for ch in range(signal.shape[0]):
-        mu, std = signal[ch].mean(), signal[ch].std()
-        if std > 1e-6:
-            signal[ch] = (signal[ch] - mu) / std
+    signal = pipeline(np.stack([ecg[lead] for lead in leads], axis=0))
 
     x = torch.from_numpy(signal).unsqueeze(0).float().to(device)
     with torch.no_grad():
@@ -84,17 +80,13 @@ def cmd_predict(args):
 def cmd_attention(args):
     """Generate a signal, run inference, and plot attention map."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model, leads, spec = _load_model(args.checkpoint, device)
+    model, leads, spec, pipeline = _load_model(args.checkpoint, device)
 
     condition = Condition[args.condition]
     sim = ECGSimulator(seed=args.seed)
     ecg = sim.generate_ecg(condition, noise_level=args.noise_level)
 
-    signal = np.stack([ecg[lead] for lead in leads], axis=0)
-    for ch in range(signal.shape[0]):
-        mu, std = signal[ch].mean(), signal[ch].std()
-        if std > 1e-6:
-            signal[ch] = (signal[ch] - mu) / std
+    signal = pipeline(np.stack([ecg[lead] for lead in leads], axis=0))
 
     x = torch.from_numpy(signal).unsqueeze(0).float().to(device)
     with torch.no_grad():
@@ -106,7 +98,7 @@ def cmd_attention(args):
 
     attention = attn.squeeze(0).cpu().numpy()  # (num_queries, seq_len)
     output = args.output or f"attention_{args.condition.lower()}.png"
-    plot_attention_map(attention, title=f"Attention — {condition.name}", path=output)
+    plot_attention_map(attention, class_names=list(spec.names), title=f"Attention — {condition.name}", path=output)
     print(f"Saved attention map to {output}")
 
 

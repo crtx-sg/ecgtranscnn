@@ -29,11 +29,10 @@ from ecg_transcovnet.augment import FABRICATION_PATTERNS
 from ecg_transcovnet.checkpoint import load_model
 from ecg_transcovnet.classes import ClassSpec
 from ecg_transcovnet.data import generate_dataset, evaluate_hdf5_test
-from ecg_transcovnet.evaluation import fit_logit_bias, summary_metrics, write_reports
+from ecg_transcovnet.evaluation import fit_logit_bias, save_confusion_png, summary_metrics, write_reports
 from ecg_transcovnet.package import PackageDataset, load_package
 from ecg_transcovnet.package_eval import EvalModel, evaluate_split
 from ecg_transcovnet.training import evaluate_detailed
-from ecg_transcovnet.visualization import save_confusion_matrix
 
 # Classes that in ecgpkg v1 come mostly from sources with only ECG2 measured.
 SINGLE_LEAD_SOURCE_CLASSES = (
@@ -147,7 +146,7 @@ def main():
         out = Path(args.output_dir)
         out.mkdir(parents=True, exist_ok=True)
         cm_path = str(out / "eval_confusion_matrix.png")
-        save_confusion_matrix(cm, list(spec.names), cm_path)
+        save_confusion_png(cm, list(spec.names), cm_path, "Confusion matrix")
         print(f"\nConfusion matrix saved to {cm_path}")
 
 
@@ -157,8 +156,15 @@ def evaluate_package(args, loaded, device) -> None:
     pkg = load_package(args.package)
     head = list(pkg.spec.names)
     ref = loaded[0]
-    if any(lm.leads != ref.leads for lm in loaded):
-        raise SystemExit("all checkpoints must use the same leads")
+    for path, lm in zip(args.checkpoint[1:], loaded[1:]):
+        for what, value, expected in (
+            ("leads", lm.leads, ref.leads),
+            ("filter preset", lm.filter_preset, ref.filter_preset),
+            ("fabricated_leads", lm.checkpoint.get("fabricated_leads", "keep"),
+             ref.checkpoint.get("fabricated_leads", "keep")),
+        ):
+            if value != expected:
+                raise SystemExit(f"{path}: {what} {value!r} differs from {args.checkpoint[0]} ({expected!r})")
     preset = args.filter_preset or ref.filter_preset
     fabricated = args.fabricated_leads or ref.checkpoint.get("fabricated_leads", "keep")
     models = [EvalModel(lm.model, list(lm.class_spec.names), path)

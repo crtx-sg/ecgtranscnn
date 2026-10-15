@@ -22,7 +22,6 @@ from .preprocessing import (
 from .training import train_one_epoch, validate, evaluate_detailed
 from .visualization import (
     save_training_curves,
-    save_confusion_matrix,
     plot_ecg_waveform,
     plot_predictions,
     plot_attention_map,
@@ -59,7 +58,6 @@ __all__ = [
     "evaluate_detailed",
     # Visualization
     "save_training_curves",
-    "save_confusion_matrix",
     "plot_ecg_waveform",
     "plot_predictions",
     "plot_attention_map",

@@ -37,7 +37,7 @@ from matplotlib.gridspec import GridSpec
 from ecg_transcovnet.classes import canonical_condition_name, decode_str
 from ecg_transcovnet.hdf5_io import read_metadata_field
 
-# Sampling rates (must match simulator constants)
+# Fallback sampling rates for files without /metadata/sampling_rate_*
 FS_ECG = 200.0
 FS_PPG = 75.0
 FS_RESP = 33.33
@@ -151,7 +151,7 @@ def plot_event(
         return
 
     n_ecg = len(list(ecg_signals.values())[0])
-    t_ecg = np.arange(n_ecg) / FS_ECG
+    t_ecg = np.arange(n_ecg) / float(read_metadata_field(hf, "sampling_rate_ecg", FS_ECG))
 
     # Read PPG / RESP
     ppg_signal = None
@@ -202,12 +202,10 @@ def plot_event(
     if vitals_text:
         fig.text(0.5, 0.965, vitals_text, ha="center", fontsize=9, color="#555555")
 
-    # Plot ECG leads
-    for i, lead in enumerate(LEAD_NAMES):
-        if lead not in ecg_signals:
-            continue
+    # Plot ECG leads, one packed row per lead present
+    for i, (lead, sig) in enumerate(ecg_signals.items()):
         ax = fig.add_subplot(gs[i])
-        ax.plot(t_ecg, ecg_signals[lead], linewidth=0.5, color="#1a1a2e")
+        ax.plot(t_ecg, sig, linewidth=0.5, color="#1a1a2e")
         ax.set_ylabel(lead, fontsize=9, rotation=0, labelpad=35, ha="right")
         ax.grid(True, alpha=0.3)
         ax.tick_params(labelsize=7)
@@ -219,7 +217,7 @@ def plot_event(
     # Plot PPG
     if ppg_signal is not None:
         n_ppg = len(ppg_signal)
-        t_ppg = np.arange(n_ppg) / FS_PPG
+        t_ppg = np.arange(n_ppg) / float(read_metadata_field(hf, "sampling_rate_ppg", FS_PPG))
         ax = fig.add_subplot(gs[row_idx])
         ax.plot(t_ppg, ppg_signal, linewidth=0.6, color="#e94560")
         ax.set_ylabel("PPG", fontsize=9, rotation=0, labelpad=35, ha="right")
@@ -230,7 +228,7 @@ def plot_event(
     # Plot RESP
     if resp_signal is not None:
         n_resp = len(resp_signal)
-        t_resp = np.arange(n_resp) / FS_RESP
+        t_resp = np.arange(n_resp) / float(read_metadata_field(hf, "sampling_rate_resp", FS_RESP))
         ax = fig.add_subplot(gs[row_idx])
         ax.plot(t_resp, resp_signal, linewidth=0.6, color="#0f3460")
         ax.set_ylabel("RESP", fontsize=9, rotation=0, labelpad=35, ha="right")

@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
-
 import numpy as np
 
 from .conditions import ConditionConfig
@@ -63,16 +61,11 @@ def create_qrs_complex(
     center: float,
     params: PatientParams,
     scale: float = 1.0,
-    wide: bool = False,
     rng: np.random.Generator | None = None,
 ) -> np.ndarray:
-    """Create QRS complex with optional widening for ventricular conditions."""
+    """Create a QRS complex of ``params.qrs_duration`` (already in the condition's range)."""
     wave = np.zeros_like(time)
     qrs_dur = params.qrs_duration
-
-    if wide:
-        width_factor = rng.uniform(1.5, 2.0) if rng is not None else 1.75
-        qrs_dur *= width_factor
 
     sharpness = params.qrs_sharpness
     amp = params.qrs_scale * scale
@@ -251,32 +244,45 @@ def generate_single_lead(
     duration = time[-1] + (time[1] - time[0])
     fs = 1.0 / (time[1] - time[0])
 
+    cycle = None
+    rate = hr
+    if condition_config.conduction_cycle is not None:
+        lo, hi = condition_config.conduction_cycle
+        cycle = int(rng.integers(lo, hi + 1))
+        rate = hr * cycle / (cycle - 1)  # atrial rate that keeps the mean ventricular rate at hr
+
+    # Beat times are P-wave-to-QRS anchors: the QRS time for conducted rhythms
+    # (P drawn PR earlier), the P-wave time for second-degree block.
     beat_times = generate_beat_times(
-        duration, hr, condition_config.rr_irregularity, rng,
+        duration, rate, condition_config.rr_irregularity, rng,
     )
 
     signal = np.zeros_like(time)
+    qrs_times = []
 
-    for bt in beat_times:
-        # P wave
-        if rng.random() < condition_config.p_wave_presence:
-            pr = patient_params.pr_interval
-            # Enforce minimum PR interval (e.g. AV blocks require PR > 200ms)
-            if condition_config.min_pr_interval is not None:
-                pr = max(pr, condition_config.min_pr_interval)
-            p_center = bt - pr
-            if p_center > 0:
-                signal += create_p_wave(time, p_center, patient_params, lead_scale, rng)
+    for i, bt in enumerate(beat_times):
+        pr = patient_params.pr_interval
+        # Enforce minimum PR interval (e.g. AV blocks require PR > 200ms)
+        if condition_config.min_pr_interval is not None:
+            pr = max(pr, condition_config.min_pr_interval)
 
-        # QRS complex
-        signal += create_qrs_complex(
-            time, bt, patient_params, lead_scale,
-            wide=condition_config.wide_qrs, rng=rng,
-        )
+        if cycle is not None:
+            k = i % cycle
+            signal += create_p_wave(time, bt, patient_params, lead_scale, rng)
+            if k == cycle - 1:
+                continue  # blocked P wave: no QRS, no T
+            qrs_t = bt + pr + k * condition_config.pr_increment
+        else:
+            qrs_t = bt
+            if rng.random() < condition_config.p_wave_presence and bt - pr > 0:
+                signal += create_p_wave(time, bt - pr, patient_params, lead_scale, rng)
+        qrs_times.append(qrs_t)
+
+        signal += create_qrs_complex(time, qrs_t, patient_params, lead_scale, rng=rng)
 
         # T wave
         beat_interval = 60.0 / hr
-        t_center = bt + patient_params.qt_base * np.sqrt(beat_interval)
+        t_center = qrs_t + patient_params.qt_base * np.sqrt(beat_interval)
         inverted = rng.random() < condition_config.t_wave_inversion_prob
         signal += create_t_wave(
             time, t_center, patient_params, lead_scale,
@@ -285,127 +291,6 @@ def generate_single_lead(
 
     # Condition-specific post-processing
     if condition_config.st_elevation:
-        signal = add_st_elevation(signal, beat_times, fs, duration, rng)
+        signal = add_st_elevation(signal, np.asarray(qrs_times), fs, duration, rng)
 
     return signal
-
-
-@dataclass
-class BeatFiducials:
-    """Ground-truth fiducial sample positions for a single beat."""
-
-    p_onset: Optional[int] = None
-    p_peak: Optional[int] = None
-    p_offset: Optional[int] = None
-    qrs_onset: int = 0
-    r_peak: int = 0
-    qrs_offset: int = 0
-    t_onset: int = 0
-    t_peak: int = 0
-    t_offset: int = 0
-
-
-def generate_lead_with_fiducials(
-    time: np.ndarray,
-    condition_config: ConditionConfig,
-    patient_params: PatientParams,
-    hr: float,
-    lead_scale: float,
-    rng: np.random.Generator,
-) -> tuple[np.ndarray, list[BeatFiducials]]:
-    """Generate a single-lead ECG waveform with fiducial ground truth.
-
-    Same logic as :func:`generate_single_lead` but records fiducial sample
-    positions from the same RNG state, ensuring perfect synchronisation.
-
-    Returns:
-        Tuple of (signal array, list of BeatFiducials per beat).
-    """
-    duration = time[-1] + (time[1] - time[0])
-    fs = 1.0 / (time[1] - time[0])
-    n_samples = len(time)
-
-    beat_times = generate_beat_times(
-        duration, hr, condition_config.rr_irregularity, rng,
-    )
-
-    signal = np.zeros_like(time)
-    fiducials_list: list[BeatFiducials] = []
-
-    for bt in beat_times:
-        fid = BeatFiducials()
-
-        # R-peak position (beat time IS the R-peak)
-        fid.r_peak = int(round(bt * fs))
-
-        # QRS onset/offset
-        qrs_dur = patient_params.qrs_duration
-        fid.qrs_onset = int(round((bt - qrs_dur / 2) * fs))
-        fid.qrs_offset = int(round((bt + qrs_dur / 2) * fs))
-
-        # P wave — uses same RNG call as generate_single_lead
-        if rng.random() < condition_config.p_wave_presence:
-            pr = patient_params.pr_interval
-            # Enforce minimum PR interval (e.g. AV blocks require PR > 200ms)
-            if condition_config.min_pr_interval is not None:
-                pr = max(pr, condition_config.min_pr_interval)
-            p_center = bt - pr
-            if p_center > 0:
-                p_half = patient_params.p_wave_width / 2
-                fid.p_peak = int(round(p_center * fs))
-                fid.p_onset = int(round((p_center - p_half) * fs))
-                fid.p_offset = int(round((p_center + p_half) * fs))
-                signal += create_p_wave(time, p_center, patient_params, lead_scale, rng)
-            else:
-                # P-wave would be before the start — skip but still consume RNG
-                # create_p_wave consumes 1 RNG call for asymmetry
-                rng.uniform(0.9, 1.1)
-        else:
-            # No P-wave: fid.p_onset/p_peak/p_offset remain None
-            pass
-
-        # QRS complex — must consume same RNG calls as generate_single_lead
-        signal += create_qrs_complex(
-            time, bt, patient_params, lead_scale,
-            wide=condition_config.wide_qrs, rng=rng,
-        )
-
-        # If wide QRS, update fiducial positions to reflect widened duration
-        if condition_config.wide_qrs:
-            # The width_factor was already consumed by create_qrs_complex above.
-            # We can't recover it, so estimate from the known range midpoint.
-            # For training ground truth this is acceptable since the signal
-            # itself was generated with the same factor.
-            est_factor = 1.75  # midpoint of [1.5, 2.0]
-            wide_dur = patient_params.qrs_duration * est_factor
-            fid.qrs_onset = int(round((bt - wide_dur / 2) * fs))
-            fid.qrs_offset = int(round((bt + wide_dur / 2) * fs))
-
-        # T wave
-        beat_interval = 60.0 / hr
-        t_center = bt + patient_params.qt_base * np.sqrt(beat_interval)
-        t_half = patient_params.t_wave_width / 2
-        fid.t_peak = int(round(t_center * fs))
-        fid.t_onset = int(round((t_center - t_half) * fs))
-        fid.t_offset = int(round((t_center + t_half) * fs))
-
-        inverted = rng.random() < condition_config.t_wave_inversion_prob
-        signal += create_t_wave(
-            time, t_center, patient_params, lead_scale,
-            inverted=inverted, rng=rng,
-        )
-
-        # Clamp all positions to valid range
-        for attr in ('p_onset', 'p_peak', 'p_offset', 'qrs_onset', 'r_peak',
-                     'qrs_offset', 't_onset', 't_peak', 't_offset'):
-            val = getattr(fid, attr)
-            if val is not None:
-                setattr(fid, attr, max(0, min(val, n_samples - 1)))
-
-        fiducials_list.append(fid)
-
-    # Condition-specific post-processing
-    if condition_config.st_elevation:
-        signal = add_st_elevation(signal, beat_times, fs, duration, rng)
-
-    return signal, fiducials_list

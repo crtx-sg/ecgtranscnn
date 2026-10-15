@@ -38,6 +38,11 @@ def event_keys(hf: h5py.File) -> list[str]:
     return sorted(k for k in hf.keys() if k.startswith("event_"))
 
 
+def missing_leads(ecg_grp: h5py.Group, leads: Sequence[str]) -> list[str]:
+    """Leads of *leads* that :func:`read_ecg_leads` would fill with zeros."""
+    return [l for l in leads if not (l in ecg_grp and isinstance(ecg_grp[l], h5py.Dataset))]
+
+
 def read_ecg_leads(ecg_grp: h5py.Group, leads: Sequence[str]) -> np.ndarray:
     """Stack *leads* into ``(len(leads), T)`` float32; missing leads are zeros."""
     arrays: dict[str, np.ndarray] = {}

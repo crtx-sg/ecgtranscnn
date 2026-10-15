@@ -53,6 +53,11 @@ class ConditionConfig:
         min_pr_interval: minimum PR interval in seconds. When set, the patient's
             PR interval is clamped to at least this value (e.g. 0.22 for 1st-degree
             AV block). None means no constraint.
+        conduction_cycle: second-degree AV block. ``(lo, hi)`` range of P waves per
+            group; the last P wave of every group is not conducted (no QRS/T).
+            None means every P wave is conducted.
+        pr_increment: PR lengthening per conducted beat within a group, in seconds
+            (Wenckebach). 0 keeps the PR constant (Mobitz II).
     """
 
     hr_range: tuple[float, float]
@@ -63,6 +68,8 @@ class ConditionConfig:
     wide_qrs: bool
     st_elevation: bool
     min_pr_interval: float | None = None
+    conduction_cycle: tuple[int, int] | None = None
+    pr_increment: float = 0.0
 
 
 CONDITION_REGISTRY: dict[Condition, ConditionConfig] = {
@@ -189,25 +196,28 @@ CONDITION_REGISTRY: dict[Condition, ConditionConfig] = {
         st_elevation=False,
         min_pr_interval=0.22,  # 1st-degree: PR > 200ms (use 220ms minimum)
     ),
+    # Second-degree blocks: hr_range is the mean ventricular rate; the irregular RR
+    # comes from the dropped beats, not from jitter.
     Condition.AV_BLOCK_2_TYPE1: ConditionConfig(
         hr_range=(45.0, 80.0),
         qrs_duration_range=(0.08, 0.12),
-        p_wave_presence=0.95,
+        p_wave_presence=1.0,
         t_wave_inversion_prob=0.05,
-        rr_irregularity=0.15,
+        rr_irregularity=0.03,
         wide_qrs=False,
         st_elevation=False,
-        min_pr_interval=0.22,  # Wenckebach also has prolonged PR
+        conduction_cycle=(3, 5),  # Wenckebach 3:2 .. 5:4
+        pr_increment=0.06,        # PR lengthens beat by beat until a P wave is blocked
     ),
     Condition.AV_BLOCK_2_TYPE2: ConditionConfig(
         hr_range=(40.0, 70.0),
         qrs_duration_range=(0.08, 0.14),
-        p_wave_presence=0.95,
+        p_wave_presence=1.0,
         t_wave_inversion_prob=0.10,
-        rr_irregularity=0.20,
+        rr_irregularity=0.03,
         wide_qrs=False,
         st_elevation=False,
-        min_pr_interval=0.22,  # Type 2 also has prolonged PR baseline
+        conduction_cycle=(3, 4),  # Mobitz II 3:2 .. 4:3, constant PR
     ),
     # --- Other ---
     Condition.ST_ELEVATION: ConditionConfig(

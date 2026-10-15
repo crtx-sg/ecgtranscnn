@@ -15,19 +15,18 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
-from sklearn.metrics import roc_auc_score
 
 from ecg_transcovnet import (
     ECGTransCovNet,
     NUM_CLASSES,
     CLASS_NAMES,
-    SIGNAL_LENGTH,
     ALL_LEADS,
     FILTER_PRESETS,
 )
 from ecg_transcovnet.checkpoint import load_model as load_checkpoint_model
 from ecg_transcovnet.classes import ClassSpec
 from ecg_transcovnet.data import generate_dataset
+from ecg_transcovnet.evaluation import compute_metrics
 from ecg_transcovnet.simulator.conditions import Condition
 
 
@@ -65,33 +64,10 @@ def collect_probabilities(
 
 
 def compute_auc(probs: np.ndarray, labels: np.ndarray) -> dict:
-    """Compute per-class OVR AUC and macro AUC."""
-    n_classes = probs.shape[1]
-    # One-hot encode labels for per-class AUC
-    y_onehot = np.eye(n_classes)[labels.astype(int)]
-
-    per_class = {}
-    valid_aucs = []
-    for i, name in enumerate(CLASS_NAMES):
-        # Need at least one positive and one negative sample
-        if y_onehot[:, i].sum() == 0 or y_onehot[:, i].sum() == len(labels):
-            per_class[name] = None
-        else:
-            auc = roc_auc_score(y_onehot[:, i], probs[:, i])
-            per_class[name] = auc
-            valid_aucs.append(auc)
-
-    macro_auc = np.mean(valid_aucs) if valid_aucs else 0.0
-
-    # Also compute weighted macro using sklearn
-    try:
-        macro_ovr = roc_auc_score(
-            y_onehot, probs, multi_class="ovr", average="macro"
-        )
-    except ValueError:
-        macro_ovr = macro_auc
-
-    return {"per_class": per_class, "macro_auc": macro_auc, "macro_ovr": macro_ovr}
+    """Per-class one-vs-rest AUROC (None without positives and negatives) and their mean."""
+    m = compute_metrics(labels, probs.argmax(axis=1), CLASS_NAMES, probs=probs)
+    return {"per_class": {n: m["per_class"][n]["auroc"] for n in CLASS_NAMES},
+            "macro_ovr": m["macro"]["auroc"]}
 
 
 def main():

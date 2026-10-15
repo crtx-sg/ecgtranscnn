@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from statistics import median
 
 
@@ -49,38 +49,39 @@ class TrendAssessment:
 @dataclass
 class ClinicalSummary:
     """Aggregated clinical analysis for a file."""
-    mews_scores: list[MEWSResult]
-    ecg_vital_correlations: list[str] = field(default_factory=list)
+    mews_scores: list[MEWSResult | None]  # None: some MEWS vital not measured
 
 
 # ---------------------------------------------------------------------------
 # MEWS scoring tables
 # ---------------------------------------------------------------------------
 
+# Tables follow Subbe et al., QJM 2001 (SpO2 replaces AVPU).
+
 def _score_hr(hr: float) -> int:
-    if hr < 40:
-        return 3
-    if hr <= 50:
+    if hr <= 40:
         return 2
+    if hr <= 50:
+        return 1
     if hr <= 100:
         return 0
     if hr <= 110:
         return 1
-    if hr <= 130:
+    if hr < 130:
         return 2
-    return 3  # >130
+    return 3  # >=130
 
 
 def _score_systolic(sbp: float) -> int:
-    if sbp < 70:
+    if sbp <= 70:
         return 3
     if sbp <= 80:
         return 2
     if sbp <= 100:
         return 1
-    if sbp <= 200:
+    if sbp < 200:
         return 0
-    return 2  # >200
+    return 2  # >=200
 
 
 def _score_resp_rate(rr: float) -> int:
@@ -100,11 +101,9 @@ def _score_temp(temp_f: float) -> int:
     temp_c = (temp_f - 32) * 5 / 9
     if temp_c < 35.0:
         return 2
-    if temp_c <= 38.4:
+    if temp_c < 38.5:
         return 0
-    if temp_c <= 39.0:
-        return 1
-    return 2  # >39.0
+    return 2  # >=38.5
 
 
 def _score_spo2(spo2: float) -> int:
@@ -270,18 +269,6 @@ def mann_kendall(values: list[float]) -> MKResult:
     return MKResult(trend=trend, p_value=p_value, slope=sens_slope, s_statistic=s)
 
 
-def _linreg_slope(x_vals: list[float], y_vals: list[float]) -> float:
-    """Simple linear regression slope."""
-    n = len(x_vals)
-    if n < 2:
-        return 0.0
-    x_mean = sum(x_vals) / n
-    y_mean = sum(y_vals) / n
-    num = sum((xi - x_mean) * (yi - y_mean) for xi, yi in zip(x_vals, y_vals))
-    den = sum((xi - x_mean) ** 2 for xi in x_vals)
-    return num / den if den > 0 else 0.0
-
-
 def _classify_direction(key: str, mk: MKResult) -> str:
     """Classify trend direction from Mann-Kendall result."""
     if mk.p_value >= _MK_ALPHA:
@@ -289,58 +276,6 @@ def _classify_direction(key: str, mk: MKResult) -> str:
     if key in ("SpO2", "Systolic", "Diastolic"):
         return "deteriorating" if mk.trend == "decreasing" else "improving"
     return "deteriorating" if mk.trend == "increasing" else "improving"
-
-
-def assess_trends(
-    event_vitals: list[dict],
-    event_histories: list[dict] | None = None,
-) -> list[TrendAssessment]:
-    """Compute linear trends for each vital across events.
-
-    Args:
-        event_vitals: list of dicts, each with keys HR, SpO2, Systolic, etc.
-        event_histories: optional list of dicts mapping vital name to history
-            arrays (list of {"value": ..., "timestamp": ...}).  When provided
-            and a vital has history data, the trend is computed from the full
-            time-series rather than single-value-per-event.
-    """
-    if len(event_vitals) < 2:
-        return []
-
-    vital_keys = ["HR", "SpO2", "Systolic", "Diastolic", "RespRate", "Temp"]
-    trends: list[TrendAssessment] = []
-
-    for key in vital_keys:
-        # Try rich history path first
-        if event_histories is not None:
-            all_samples: list[tuple[float, float]] = []
-            for hist_dict in event_histories:
-                for sample in hist_dict.get(key, []):
-                    all_samples.append((sample["timestamp"], sample["value"]))
-            if len(all_samples) >= 2:
-                all_samples.sort(key=lambda s: s[0])
-                y_vals = [s[1] for s in all_samples]
-                mk = mann_kendall(y_vals)
-                direction = _classify_direction(key, mk)
-                trends.append(TrendAssessment(
-                    vital_name=key, direction=direction, slope=mk.slope,
-                    values=y_vals, p_value=mk.p_value, significant=mk.p_value < _MK_ALPHA,
-                ))
-                continue
-
-        # Fall back to single-value-per-event
-        values = [v.get(key) for v in event_vitals]
-        if any(v is None for v in values):
-            continue
-        vals = [float(v) for v in values]
-        mk = mann_kendall(vals)
-        direction = _classify_direction(key, mk)
-        trends.append(TrendAssessment(
-            vital_name=key, direction=direction, slope=mk.slope,
-            values=vals, p_value=mk.p_value, significant=mk.p_value < _MK_ALPHA,
-        ))
-
-    return trends
 
 
 def assess_event_trends(vitals_history: dict) -> list[TrendAssessment]:
@@ -372,18 +307,10 @@ def assess_event_trends(vitals_history: dict) -> list[TrendAssessment]:
     return trends
 
 
-def assess_mews_trend(mews_history: list[dict]) -> MKResult | None:
-    """Run Mann-Kendall on MEWS total scores from compute_mews_history output."""
-    scores = [h["mews"].total_score for h in mews_history]
-    if len(scores) < 3:
-        return None
-    return mann_kendall([float(s) for s in scores])
-
-
 def correlate_ecg_vitals(
     condition: str,
     vitals: dict,
-    mews: MEWSResult,
+    mews: MEWSResult | None,
 ) -> list[str]:
     """Generate rule-based clinical notes correlating ECG findings with vitals."""
     notes: list[str] = []
@@ -412,36 +339,23 @@ def correlate_ecg_vitals(
         notes.append("AFib with rapid ventricular response — consider rate control")
 
     # High MEWS
-    if mews.total_score >= 5:
+    if mews is not None and mews.total_score >= 5:
         notes.append(f"MEWS {mews.total_score} ({mews.risk_level}) — escalate care")
 
     return notes
 
 
 def analyze_file(events: list[dict]) -> ClinicalSummary:
-    """Orchestrate MEWS calculation, trend analysis, and correlations for a file.
+    """MEWS for every event of a file; ``None`` where a MEWS vital was not measured.
 
     Args:
         events: list of dicts with keys: condition, vitals (dict with HR, SpO2, etc.)
     """
-    mews_scores: list[MEWSResult] = []
-    all_correlations: list[str] = []
-
+    mews_scores: list[MEWSResult | None] = []
     for ev in events:
         v = ev.get("vitals", {})
-        hr = v.get("HR", 80)
-        systolic = v.get("Systolic", 120)
-        rr = v.get("RespRate", 16)
-        temp = v.get("Temp", 98.6)
-        spo2 = v.get("SpO2", 98)
-
-        mews = calculate_mews(hr, systolic, rr, temp, spo2)
+        mews = None
+        if all(v.get(k) is not None for k in _MEWS_VITALS):
+            mews = calculate_mews(v["HR"], v["Systolic"], v["RespRate"], v["Temp"], v["SpO2"])
         mews_scores.append(mews)
-
-        notes = correlate_ecg_vitals(ev.get("condition", ""), v, mews)
-        all_correlations.extend(notes)
-
-    return ClinicalSummary(
-        mews_scores=mews_scores,
-        ecg_vital_correlations=all_correlations,
-    )
+    return ClinicalSummary(mews_scores=mews_scores)

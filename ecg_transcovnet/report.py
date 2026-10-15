@@ -11,7 +11,7 @@ import h5py
 import numpy as np
 
 from .hdf5_io import read_metadata_field
-from .mews import MEWSResult, TrendAssessment, ClinicalSummary, compute_mews_history, assess_mews_trend
+from .mews import MEWSResult, TrendAssessment, ClinicalSummary
 
 
 @dataclass
@@ -32,6 +32,7 @@ class EventResult:
     vitals_history: dict = field(default_factory=dict)
     vitals_thresholds: dict = field(default_factory=dict)
     vitals_trends: list[TrendAssessment] = field(default_factory=list)
+    missing_leads: list[str] = field(default_factory=list)  # zero-filled at inference
 
 
 @dataclass
@@ -63,7 +64,6 @@ def extract_ids(filepath: Path, hf: h5py.File) -> tuple[str, str]:
 
 def generate_report(
     file_result: FileResult,
-    plot_dir: Path | None = None,
     event_plots: dict[str, dict[str, Path]] | None = None,
 ) -> str:
     """Build a markdown report string from inference results."""
@@ -92,8 +92,6 @@ def generate_report(
         lines.append("")
 
         for i, ev in enumerate(fr.events):
-            if ev.mews is None and not ev.clinical_notes:
-                continue
             lines.append(f"### Event {ev.event_id}")
             lines.append("")
 
@@ -120,6 +118,10 @@ def generate_report(
                 f"| {ev.pred_prob:.3f} | {match_str} |"
             )
             lines.append("")
+            if ev.missing_leads:
+                lines.append(f"**Missing leads (zero-filled, prediction unreliable)**: "
+                             f"{', '.join(ev.missing_leads)}")
+                lines.append("")
 
             # --- Vitals at Event ---
             if ev.mews:
@@ -129,6 +131,9 @@ def generate_report(
                 lines.append("|-----------|-------|-------|")
                 for comp in ev.mews.components:
                     lines.append(f"| {comp.name} | {comp.value} | {comp.score} |")
+                lines.append("")
+            else:
+                lines.append("#### Vitals at Event — MEWS not scored (vitals incomplete)")
                 lines.append("")
 
             # --- Threshold Status ---
@@ -202,6 +207,6 @@ def write_report(
     """
     report_name = f"report-{file_result.patient_id}-{file_result.alarm_id}.md"
     report_path = file_result.filepath.parent / report_name
-    content = generate_report(file_result, plot_dir=plot_dir, event_plots=event_plots)
+    content = generate_report(file_result, event_plots=event_plots)
     report_path.write_text(content)
     return report_path

@@ -24,7 +24,6 @@ ALL_REAL = "1111111"
 PATTERN_ECG2_V1 = "0100001"    # MIT-BIH style: ECG2 and vVX measured
 PATTERN_ECG2_ONLY = "0100000"  # VFDB/CUDB/AFDB style: only ECG2 measured
 FABRICATION_PATTERNS = (PATTERN_ECG2_V1, PATTERN_ECG2_ONLY)
-MASK_LEADS = ("ECG1", "ECG2", "ECG3", "aVR", "aVL", "aVF", "vVX")
 
 
 # ---------------------------------------------------------------------------

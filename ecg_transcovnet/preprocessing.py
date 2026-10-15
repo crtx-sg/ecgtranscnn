@@ -10,7 +10,7 @@ is disabled (preset ``"none"``).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
@@ -205,16 +205,8 @@ class PreprocessingPipeline:
         return filtfilt(b, a, signal, axis=-1).astype(signal.dtype)
 
     @staticmethod
-    def _normalize_lead(lead: np.ndarray) -> np.ndarray:
-        mu = lead.mean()
-        std = lead.std()
-        if std > 1e-6:
-            return (lead - mu) / std
-        return lead - mu
-
-    @staticmethod
     def _normalize_leads(signal: np.ndarray) -> np.ndarray:
-        """Per-lead z-score over the last axis (same rule as ``_normalize_lead``)."""
+        """Per-lead z-score over the last axis; flat leads are only centred."""
         mu = signal.mean(axis=-1, keepdims=True)
         std = signal.std(axis=-1, keepdims=True)
         centred = signal - mu
